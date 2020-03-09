@@ -1,0 +1,5 @@
+** Phase 1:
+*** DONE Display tracks as seperate, one colour + intensty
+*** TODO Prevent collision between tracks
+*** TODO display loop of every step with history
+*** TODO create the simplest clustering/shoaling. Maybe, animal wants to follow the centre of mass of other animals the further away it gets

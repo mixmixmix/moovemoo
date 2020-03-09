@@ -1,25 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
-def updatePosition2(x,y,side,home):
-    fardist = 30. #test
-    #distance from home
-    dhome=np.array([home[0]-x,home[1]-y])
-    #dx, dy = 3*np.ceil(np.random.rand(2,) + (dhome/fardist)*np.random.rand(2,)).astype(int)-1
-    dx, dy = np.round(2*np.random.rand(2,)-1).astype(int)
-    #sys.stdout.write(str(int(dhome[0])))
-    #sys.stdout.flush()
-
-    #print('dx: {0}, dy: {1}'.format(dx,dy))
-    #boundary teleportation: (aka periodic)
-    #x = (x+dx)%side
-    #y = (y+dy)%side
-    #boundary reflective:
-    x = max(min(x+dx,side-1),0)
-    y = max(min(y+dy,side-1),0)
-
-    return x, y
-
+import colorsys
+from skimage.color import hsv2rgb
 
 """
 Updates position of all Zwierzaks
@@ -48,11 +30,13 @@ def handleColisions(zwk, borders):
 
 
 class Zwierzak:
-    x_pos=0
-    y_pos=0
-    def __init__(self, x_init,y_init):
+    # x_pos=0
+    # y_pos=0
+    # hue = 0
+    def __init__(self, x_init,y_init, hue=0, sat=1):
         self.x_pos=x_init
         self.y_pos=y_init
+        self.hsv=(hue,sat,0) # initialise as a dim value
 
 """
 This class shows any natural and unnatural boundaries for the environment
@@ -73,20 +57,36 @@ A little loading-time test of current animal setup
 """
 def main():
     side = 100
+    ch = 3 #RGB image displays output
     borders = Borders(0,0,side,side)
-    plane = np.zeros((side,side),int)
+    hsv_plane = np.zeros((side,side,ch),float) #HSV values are 0.0:1.0 hue, 0.0:1.0 saturation, 0:255 (int) value
 
     #np.random.seed(0)
     #x_init, y_init = map(int,map(round,np.random.uniform(0, side-1, 2)))
-    x_init, y_init = [side//2,side//2] 
+    x_init, y_init = [side//2,side//2]
     home = [x_init, y_init]
 
-    alf = Zwierzak(x_init,y_init)
+    alf1 = Zwierzak(x_init,y_init, hue=0,sat=1)
+    alf2 = Zwierzak(0,0,hue=0.1,sat=1)
+    alf3 = Zwierzak(0,0,hue=0.2,sat=1)
+    alf4 = Zwierzak(x_init,y_init,hue=0.3,sat=1)
+    alf5 = Zwierzak(0,0,hue=0.4,sat=1)
+    alfs = [alf1,alf2,alf3,alf4,alf5]
 
     for it in range(1000):
-        alf = updatePosition(alf)
-        alf = handleColisions(alf,borders)
-        plane[alf.x_pos,alf.y_pos]=plane[alf.x_pos,alf.y_pos]+1
+        for alf in alfs:
+            alf = updatePosition(alf)
+            alf = handleColisions(alf,borders)
+            cc = hsv_plane[alf.x_pos,alf.y_pos]
+            hsv_plane[alf.x_pos,alf.y_pos]=(alf.hsv[0], alf.hsv[1],min(cc[2]+10,255))
+            # print(plane[alf.x_pos,alf.y_pos])
+
+    plane = np.zeros((side,side,ch),int)
+    #change the whole image from hsv to rgb
+    for i in range(plane.shape[0]):
+        for j in range(plane.shape[1]):
+            plane[j,i] = colorsys.hsv_to_rgb(hsv_plane[j,i][0],hsv_plane[j,i][1],hsv_plane[j,i][2])
+    #planergb = hsv2rgb(plane)
 
     plt.imshow(plane)
     plt.savefig('test.png')
