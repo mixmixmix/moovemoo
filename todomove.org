@@ -2,4 +2,4 @@
 *** DONE Display tracks as seperate, one colour + intensty
 *** DONE Prevent collision between tracks
 *** DONE display loop of every step with history
-*** TODO create the simplest clustering/shoaling. Maybe, animal wants to follow the centre of mass of other animals the further away it gets
+*** DONE create a simple homing mechanism

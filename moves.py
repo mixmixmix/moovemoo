@@ -6,12 +6,22 @@ from skimage.color import hsv2rgb
 import cv2
 
 """
-Updates position of all Zwierzaks
+Updates position of all Zwierzaks.
+They generally like to cluster, if they are suitably far away
 """
-def updatePosition(zwk):
+def updatePosition(zwk,zwks,x_home,y_home):
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
-    dx, dy = np.round(2*np.random.rand(2,)-1).astype(int)
+    fardist=30.
+    dhome_x=zwk.x_prev - x_home
+    dhome_y=zwk.x_prev - x_home
+    homing_x = 0.01*dhome_x
+    homing_y = 0.01*dhome_y
+    pl_x=max(0.33+homing_x,0)
+    pl_y=max(0.33+homing_y,0)
+    dx = np.random.choice([-1,0,1], p=[pl_x, 0.34, 0.66-pl_x])
+    dy = np.random.choice([-1,0,1], p=[pl_y, 0.34, 0.66-pl_y])
+    # dx, dy = np.round(2*np.random.rand(2,)-1).astype(int)
     zwk.x_pos = zwk.x_prev+dx
     zwk.y_pos = zwk.y_prev+dy
     return zwk
@@ -39,6 +49,8 @@ def handleColisions(zwk, borders, zwks_list):
 class Zwierzak:
     def __init__(self, zwkid, x_init,y_init, hue=0, sat=1):
         self.id = zwkid
+        self.x_init=x_init
+        self.y_init=y_init
         self.x_pos=x_init
         self.y_pos=y_init
         self.x_prev=x_init
@@ -84,7 +96,7 @@ def main():
 
     for it in range(1000):
         for alf in alfs:
-            alf = updatePosition(alf)
+            alf = updatePosition(alf,alfs,home[0],home[1])
             alf = handleColisions(alf,borders,alfs)
             cc = hsv_plane[alf.x_pos,alf.y_pos]
             hsv_plane[alf.x_pos,alf.y_pos]=(alf.hsv[0], alf.hsv[1],min(cc[2]+10,255))
