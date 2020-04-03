@@ -3,3 +3,17 @@
 *** DONE Prevent collision between tracks
 *** DONE display loop of every step with history
 *** DONE create a simple homing mechanism
+
+** Phase 2:
+*** TODO change Alfs to use ellipses instead of points
+*** TODO test option of displaying bounding boxes around
+*** TODO make movement use radious, distance parameters instead of grid
+*** TODO rotate ellipses with movement 
+*** TODO change collision detection into perception behaviour
+
+** Phase 3:
+*** TODO export positions of BB into *.trk file
+*** TODO allow reading in positions
+
+** TODO Phase 4: Code O-U movement
+

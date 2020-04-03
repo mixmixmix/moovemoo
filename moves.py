@@ -77,6 +77,8 @@ A little loading-time test of current animal setup
 def main():
     cv2.namedWindow('plane', cv2.WINDOW_GUI_EXPANDED)
     cv2.moveWindow('plane', 200,200)
+    cv2.namedWindow('HDplane', cv2.WINDOW_GUI_EXPANDED)
+    cv2.moveWindow('HDplane', 200,200)
     side = 100
     ch = 3 #RGB image displays output
     borders = Borders(0,0,side,side)
@@ -93,6 +95,11 @@ def main():
     alf3 = Zwierzak('alf3',x_init,y_init,hue=0.3,sat=1)
     alf4 = Zwierzak('alf4',0,0,hue=0.4,sat=1)
     alfs = [alf1,alf2,alf3,alf4,alf0]
+
+    hdplane = np.zeros((500,500,3),np.uint8)
+    #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
+    cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
+    cv2.imshow("HDplane",hdplane)
 
     for it in range(1000):
         for alf in alfs:
