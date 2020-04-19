@@ -50,12 +50,26 @@ They generally like to cluster, if they are suitably far away
 """
 def updatePosition(zwk,zwks,x_home,y_home):
     rng = np.random.default_rng()
-    newturn = rng.normal(0,10,1)
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
+
+
+    if rng.binomial(1,0.05):
+        zwk.state=rng.integers(0,2)
+
+    if zwk.state==0:
+        zwk.speed = 1
+    if zwk.state == 1:
+        zwk.speed = rng.normal(3,1,1)
+    if zwk.state == 2:
+        zwk.speed = zwk.speed + rng.normal(3,1,1)
+
+
+
+    newturn = rng.normal(0,max(zwk.speed,0),1)
     zwk.angle = zwk.angle + newturn
-    dx = int(10 * np.cos(np.pi * zwk.angle/180))
-    dy = int(10 * np.sin(np.pi * zwk.angle/180))
+    dx = int(zwk.speed * np.cos(np.pi * zwk.angle/180))
+    dy = int(zwk.speed * np.sin(np.pi * zwk.angle/180))
     zwk.x_pos = zwk.x_prev+dx
     zwk.y_pos = zwk.y_prev+dy
 
@@ -71,6 +85,11 @@ def handleColisions(zwk, borders, zwks_list):
     lside = borders.x_min # ASSUME IT IS SQUARE
     zwk.x_pos = max(min(zwk.x_pos,rside-1),lside)
     zwk.y_pos = max(min(zwk.y_pos,rside-1),lside)
+    zwk.state = 3
+
+    rng = np.random.default_rng()
+    newturn = rng.normal(0,max(10,0),1)
+    zwk.angle = zwk.angle + newturn
 
     return zwk
 
@@ -88,6 +107,9 @@ class Zwierzak:
         self.angle = 0
         self.islong = 30 #half of width and height as opencv ellipses measurements defined
         self.iswide = 10
+        self.speed = 2
+
+        self.state = 0 #0 passive, speed = 1, 1 normal, speed around 3
 
 """
 This class shows any natural and unnatural boundaries for the environment
@@ -109,12 +131,13 @@ A little loading-time test of current animal setup
 def main():
     #cv2.namedWindow('HDplane', cv2.WINDOW_GUI_EXPANDED)
     # cv2.moveWindow('HDplane', 200,200)
-    side = 500
+    side = 1500
     ch = 3 #RGB image displays output
-    borders = Borders(0,0,side,side)
+    borders = Borders(20,20,side-20,side-20)
 
     #keeps the information of previous occupancy
     hdplane = np.zeros((side,side,3),np.uint8) 
+    cv2.rectangle(hdplane,(20,20),(side-20,side-20),(230,0,0),4)
     hsv_plane = np.zeros((side,side,ch),float) #HSV values are 0.0:1.0 hue, 0.0:1.0 saturation, 0:255 (int) value
 
     #np.random.seed(0)
@@ -123,10 +146,10 @@ def main():
     home = [x_init, y_init]
 
     alf0 = Zwierzak('alf0',x_init,y_init, hue=0,sat=1)
-    alf1 = Zwierzak('alf1',0,0,hue=0.1,sat=1)
-    alf2 = Zwierzak('alf2',0,0,hue=0.2,sat=1)
+    alf1 = Zwierzak('alf1',130,130,hue=0.1,sat=1)
+    alf2 = Zwierzak('alf2',2000,50,hue=0.2,sat=1)
     alf3 = Zwierzak('alf3',x_init,y_init,hue=0.3,sat=1)
-    alf4 = Zwierzak('alf4',0,0,hue=0.4,sat=1)
+    alf4 = Zwierzak('alf4',42,66,hue=0.4,sat=1)
     alfs = [alf1,alf2,alf3,alf4,alf0]
     #alfs = [alf0]
 
