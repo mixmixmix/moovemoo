@@ -6,6 +6,19 @@ import colorsys
 from skimage.color import hsv2rgb
 import cv2
 
+def updateTrace(hsv_plane,alf):
+    cc = hsv_plane[alf.x_pos,alf.y_pos]
+    cv2.ellipse(hsv_plane,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,(alf.hsv[0], alf.hsv[1],min(cc[2]+10,255)),-1)
+    return hsv_plane
+
+def showTrace(hsv_plane,alf,side,ch):
+    hdplane = np.zeros((side,side,ch),np.uint8)
+    #change the whole image from hsv to rgb
+    for i in range(hdplane.shape[0]):
+        for j in range(hdplane.shape[1]):
+            hdplane[j,i] = colorsys.hsv_to_rgb(hsv_plane[j,i][0],hsv_plane[j,i][1],hsv_plane[j,i][2])
+    return hdplane
+
 
 def getRoI(zwk):
             sinzwk = zwk.islong * math.sin(np.pi * zwk.angle / 180)
@@ -59,12 +72,6 @@ def handleColisions(zwk, borders, zwks_list):
     zwk.x_pos = max(min(zwk.x_pos,rside-1),lside)
     zwk.y_pos = max(min(zwk.y_pos,rside-1),lside)
 
-    for other_zwk in zwks_list:
-        if other_zwk.id == zwk.id:
-            continue
-        if zwk.x_pos == other_zwk.x_pos and zwk.y_pos == other_zwk.y_pos:
-            zwk.x_pos = zwk.x_prev
-            zwk.y_pos = zwk.y_prev
     return zwk
 
 
@@ -130,15 +137,7 @@ def main():
         for alf in alfs:
             alf = updatePosition(alf,alfs,home[0],home[1])
             alf = handleColisions(alf,borders,alfs)
-            cc = hsv_plane[alf.x_pos,alf.y_pos]
-            cv2.ellipse(hsv_plane,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,(alf.hsv[0], alf.hsv[1],min(cc[2]+10,255)),-1)
-
-        hdplane = np.zeros((side,side,ch),np.uint8)
-        #change the whole image from hsv to rgb
-        for i in range(hdplane.shape[0]):
-            for j in range(hdplane.shape[1]):
-                hdplane[j,i] = colorsys.hsv_to_rgb(hsv_plane[j,i][0],hsv_plane[j,i][1],hsv_plane[j,i][2])
-        #planergb = hsv2rgb(plane)
+            hsv_plane = updateTrace(hsv_plane,alf)
 
         plane_cur = hdplane.copy()
         for alf in alfs:
@@ -152,8 +151,9 @@ def main():
         if key==ord('q'):
             break
 
-#    plt.savefig('test.png')
-#    plt.show()
+    hdplane = showTrace(hsv_plane,alf,side,ch)
+    cv2.imshow("hdplane",hdplane)
+    cv2.waitKey(0)
 
 if __name__ == '__main__':
     main()
