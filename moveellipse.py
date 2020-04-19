@@ -6,6 +6,7 @@ import colorsys
 from skimage.color import hsv2rgb
 import cv2
 
+
 def getRoI(zwk):
             sinzwk = zwk.islong * math.sin(np.pi * zwk.angle / 180)
             coszwk = zwk.islong * math.cos(np.pi * zwk.angle / 180)
@@ -23,7 +24,7 @@ def getRoI(zwk):
             topleft = (np.min([c1[0],c2[0],c3[0],c4[0]])-offset,np.min([c1[1],c2[1],c3[1],c4[1]])-offset)
             # maxes of all
             bottomright = (np.max([c1[0],c2[0],c3[0],c4[0]])+offset,np.max([c1[1],c2[1],c3[1],c4[1]])+offset)
-            return (topleft, bottomright)
+            return (head, topleft, bottomright)
 
 
 def normToOne(vallist):
@@ -35,24 +36,16 @@ Updates position of all Zwierzaks.
 They generally like to cluster, if they are suitably far away
 """
 def updatePosition(zwk,zwks,x_home,y_home):
+    rng = np.random.default_rng()
+    newturn = rng.normal(0,10,1)
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
-    fardist=30.
-    dhome_x=zwk.x_prev - x_home
-    dhome_y=zwk.x_prev - x_home
-    homing_x = 0.01*dhome_x
-    homing_y = 0.01*dhome_y
-    pl_x=min(max(0.33+homing_x,0),0.66)
-    pl_y=min(max(0.33+homing_y,0),0.66)
-    plistx = normToOne([pl_x, 0.34, 0.66-pl_x])
-    plisty = normToOne([pl_y, 0.34, 0.66-pl_y])
-    dx = 20 * np.random.choice([-1,0,1], p=plistx)
-    dy = 20 * np.random.choice([-1,0,1], p=plisty)
-    # dx, dy = np.round(2*np.random.rand(2,)-1).astype(int)
+    zwk.angle = zwk.angle + newturn
+    dx = int(10 * np.cos(np.pi * zwk.angle/180))
+    dy = int(10 * np.sin(np.pi * zwk.angle/180))
     zwk.x_pos = zwk.x_prev+dx
     zwk.y_pos = zwk.y_prev+dy
 
-    zwk.angle = np.random.uniform(-30,30,1)
     return zwk
 
 """
@@ -109,7 +102,7 @@ A little loading-time test of current animal setup
 def main():
     #cv2.namedWindow('HDplane', cv2.WINDOW_GUI_EXPANDED)
     # cv2.moveWindow('HDplane', 200,200)
-    side = 200
+    side = 500
     ch = 3 #RGB image displays output
     borders = Borders(0,0,side,side)
 
@@ -123,58 +116,15 @@ def main():
     home = [x_init, y_init]
 
     alf0 = Zwierzak('alf0',x_init,y_init, hue=0,sat=1)
-    # alf1 = Zwierzak('alf1',0,0,hue=0.1,sat=1)
-    # alf2 = Zwierzak('alf2',0,0,hue=0.2,sat=1)
-    # alf3 = Zwierzak('alf3',x_init,y_init,hue=0.3,sat=1)
-    # alf4 = Zwierzak('alf4',0,0,hue=0.4,sat=1)
-    #alfs = [alf1,alf2,alf3,alf4,alf0]
-    alfs = [alf0]
+    alf1 = Zwierzak('alf1',0,0,hue=0.1,sat=1)
+    alf2 = Zwierzak('alf2',0,0,hue=0.2,sat=1)
+    alf3 = Zwierzak('alf3',x_init,y_init,hue=0.3,sat=1)
+    alf4 = Zwierzak('alf4',0,0,hue=0.4,sat=1)
+    alfs = [alf1,alf2,alf3,alf4,alf0]
+    #alfs = [alf0]
 
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
-
-
-    for a in range(0,360,10):
-        plane_cur = hdplane.copy()
-        for alf in alfs:
-            alf.angle = a
-            print(alf.angle)
-            cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,colorsys.hsv_to_rgb(alf.hsv[0], alf.hsv[1],255),-1)
-            sinalf = alf.islong * math.sin(np.pi * alf.angle / 180)
-            cosalf = alf.islong * math.cos(np.pi * alf.angle / 180)
-            sinalfw = alf.iswide * math.sin(np.pi * alf.angle / 180)
-            cosalfw = alf.iswide * math.cos(np.pi * alf.angle / 180)
-            #cv2.rectangle(plane_cur,(alf.x_pos-25*cosalf,alf.y_pos+25*sinalf),(alf.x_pos+25*cosalf,alf.y_pos-25*sinalf),(0,0,255),-1)
-            # head = (int(alf.x_pos+cosalf-sinalfw),int(alf.y_pos+sinalf+cosalfw))
-            # tail = (int(alf.x_pos-cosalf+sinalfw),int(alf.y_pos-sinalf-cosalfw))
-            tail = (int(alf.x_pos-cosalf),int(alf.y_pos-sinalf))
-            head = (int(alf.x_pos+cosalf),int(alf.y_pos+sinalf))
-
-            c1 = (int(head[0]+sinalfw),int(head[1]-cosalfw))
-            c2 = (int(head[0]-sinalfw),int(head[1]+cosalfw))
-            c3 = (int(tail[0]-sinalfw),int(tail[1]+cosalfw))
-            c4 = (int(tail[0]+sinalfw),int(tail[1]-cosalfw))
-            cv2.drawMarker(plane_cur,c1,(255,255,0),cv2.MARKER_SQUARE)
-            cv2.drawMarker(plane_cur,c2,(255,255,0),cv2.MARKER_DIAMOND)
-            cv2.drawMarker(plane_cur,c3,(255,255,0),cv2.MARKER_TRIANGLE_DOWN)
-            cv2.drawMarker(plane_cur,c4,(255,255,0),cv2.MARKER_TRIANGLE_UP)
-
-            offset = 2
-            # mins of all
-            topleft = (np.min([c1[0],c2[0],c3[0],c4[0]])-offset,np.min([c1[1],c2[1],c3[1],c4[1]])-offset)
-            # maxes of all
-            bottomright = (np.max([c1[0],c2[0],c3[0],c4[0]])+offset,np.max([c1[1],c2[1],c3[1],c4[1]])+offset)
-
-            cv2.line(plane_cur,tail,head,(0,0,255),2)
-            cv2.drawMarker(plane_cur,head,(0,255,0))
-            cv2.drawMarker(plane_cur,tail,(255,255,255))
-            cv2.rectangle(plane_cur,tail,head,(0,0,255),2)
-            cv2.rectangle(plane_cur,topleft,bottomright,(0,255,255),2)
-        cv2.imshow("hdplane",plane_cur)
-        # cv2.waitKey(20)
-        key = cv2.waitKey(0)
-        if key==ord('q'):
-            break
 
     for it in range(1000):
         for alf in alfs:
@@ -193,11 +143,12 @@ def main():
         plane_cur = hdplane.copy()
         for alf in alfs:
             cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,colorsys.hsv_to_rgb(alf.hsv[0], alf.hsv[1],255),-1)
-            (r1,r2) = getRoI(alf)
+            (head, r1,r2) = getRoI(alf)
+            cv2.circle(plane_cur,head,3,(0,255,255))
             cv2.rectangle(plane_cur,r1,r2,(0,0,255),2)
         cv2.imshow("hdplane",plane_cur)
         # cv2.waitKey(20)
-        key = cv2.waitKey(0)
+        key = cv2.waitKey(20)
         if key==ord('q'):
             break
 
