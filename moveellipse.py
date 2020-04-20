@@ -1,4 +1,5 @@
 import math
+import yaml
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -64,12 +65,26 @@ def updatePosition(zwk,zwks,x_home,y_home):
     if zwk.state == 2:
         zwk.speed = zwk.speed + rng.normal(3,1,1)
 
+    #homing
+    vec_home = [x_home - zwk.x_pos, y_home - zwk.y_pos]
+    dist_home = np.linalg.norm(vec_home)
+    ang_home = np.degrees(np.arctan2(vec_home[1],vec_home[0])) #rng.normal(0,10,1)
 
+    ang_explore = rng.normal(0,max(zwk.speed,0),1)
+    new_angle = zwk.angle + ang_explore
+    dirhome = (ang_home - new_angle)/360 #between 0,1
 
-    newturn = rng.normal(0,max(zwk.speed,0),1)
-    zwk.angle = zwk.angle + newturn
+    if dist_home > 150:
+        ang_tohome = 4
+    else:
+        ang_tohome = 0
+    zwk.angle = new_angle + dirhome * ang_tohome
+
     dx = int(zwk.speed * np.cos(np.pi * zwk.angle/180))
     dy = int(zwk.speed * np.sin(np.pi * zwk.angle/180))
+    vec_explore = [dx,dy]
+
+
     zwk.x_pos = zwk.x_prev+dx
     zwk.y_pos = zwk.y_prev+dy
 
@@ -85,11 +100,11 @@ def handleColisions(zwk, borders, zwks_list):
     lside = borders.x_min # ASSUME IT IS SQUARE
     zwk.x_pos = max(min(zwk.x_pos,rside-1),lside)
     zwk.y_pos = max(min(zwk.y_pos,rside-1),lside)
-    zwk.state = 3
+    #zwk.state = 3
 
-    rng = np.random.default_rng()
-    newturn = rng.normal(0,max(10,0),1)
-    zwk.angle = zwk.angle + newturn
+    # rng = np.random.default_rng()
+    # newturn = rng.normal(0,max(10,0),1)
+    # zwk.angle = zwk.angle + newturn
 
     return zwk
 
@@ -108,8 +123,13 @@ class Zwierzak:
         self.islong = 30 #half of width and height as opencv ellipses measurements defined
         self.iswide = 10
         self.speed = 2
-
         self.state = 0 #0 passive, speed = 1, 1 normal, speed around 3
+
+        #unusual numbers to encourage program loudly crashing
+        self.topleft = -111
+        self.bottomright = -111
+        self.topleft_prev = -111
+        self.bottomright_prev = -111
 
 """
 This class shows any natural and unnatural boundaries for the environment
@@ -129,9 +149,16 @@ class Borders:
 A little loading-time test of current animal setup
 """
 def main():
+
+    annotations_file = 'output/train_data.yml'
+    sequence_file = 'output/seq_data.yml'
+    all_imgs = []
+    all_seq = []
+
+
     #cv2.namedWindow('HDplane', cv2.WINDOW_GUI_EXPANDED)
     # cv2.moveWindow('HDplane', 200,200)
-    side = 1500
+    side = 416
     ch = 3 #RGB image displays output
     borders = Borders(20,20,side-20,side-20)
 
@@ -146,33 +173,93 @@ def main():
     home = [x_init, y_init]
 
     alf0 = Zwierzak('alf0',x_init,y_init, hue=0,sat=1)
-    alf1 = Zwierzak('alf1',130,130,hue=0.1,sat=1)
-    alf2 = Zwierzak('alf2',2000,50,hue=0.2,sat=1)
-    alf3 = Zwierzak('alf3',x_init,y_init,hue=0.3,sat=1)
-    alf4 = Zwierzak('alf4',42,66,hue=0.4,sat=1)
-    alfs = [alf1,alf2,alf3,alf4,alf0]
-    #alfs = [alf0]
+    alf1 = Zwierzak('alf1',130,130,hue=0.6,sat=1)
+    # alf2 = Zwierzak('alf2',2000,50,hue=0.2,sat=1)
+    # alf3 = Zwierzak('alf3',x_init,y_init,hue=0.3,sat=1)
+    # alf4 = Zwierzak('alf4',42,66,hue=0.4,sat=1)
+    # alfs = [alf1,alf2,alf3,alf4,alf0]
+    alfs = [alf0,alf1]
 
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
-    for it in range(1000):
+    for it in range(100):
         for alf in alfs:
             alf = updatePosition(alf,alfs,home[0],home[1])
             alf = handleColisions(alf,borders,alfs)
             hsv_plane = updateTrace(hsv_plane,alf)
 
         plane_cur = hdplane.copy()
+
+        #saving all the output:
+        save_name = 'im' + '{:04d}'.format(it) + '.jpg'
+        img_data = {'object':[]}
+        img_data['filename'] = save_name
+        img_data['width'] = side
+        img_data['height'] = side
+
+        if it > 0:
+            seq_data = {'object':[]}
+            seq_data['filename'] = save_name
+            seq_data['p1_filename'] = 'im' + '{:04d}'.format(it-1) + '.jpg'
+            seq_data['p2_filename'] = 'im' + '{:04d}'.format(it-2) + '.jpg'
+            seq_data['width'] = 416
+            seq_data['height'] = 416
+
         for alf in alfs:
             cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,colorsys.hsv_to_rgb(alf.hsv[0], alf.hsv[1],255),-1)
             (head, r1,r2) = getRoI(alf)
             cv2.circle(plane_cur,head,3,(0,255,255))
-            cv2.rectangle(plane_cur,r1,r2,(0,0,255),2)
+            # cv2.rectangle(plane_cur,r1,r2,(0,0,255),2)
+            alf.topleft = (float(min(r1[0],r2[0])),float(min(r1[1],r2[1])))
+            alf.bottomright = (float(max(r1[0],r2[0])),float(max(r1[1],r2[1])))
+
+            obj = {}
+            obj['name'] = 'alf'
+            obj['xmin'] = alf.topleft[0]
+            obj['ymin'] = alf.topleft[1]
+            obj['xmax'] = alf.bottomright[0]
+            obj['ymax'] = alf.bottomright[1]
+            obj['id'] = alf.id
+            obj['time']=it
+            img_data['object'] += [obj]
+
+            if it > 0:
+                obj = {}
+                obj['name'] = 'alf'
+                obj['xmin'] = alf.topleft[0]
+                obj['ymin'] = alf.topleft[1]
+                obj['xmax'] = alf.bottomright[0]
+                obj['ymax'] = alf.bottomright[1]
+                obj['pxmin'] = alf.topleft_prev[0]
+                obj['pymin'] = alf.topleft_prev[1]
+                obj['pxmax'] = alf.bottomright_prev[0]
+                obj['pymax'] = alf.bottomright_prev[1]
+
+                seq_data['object'] += [obj]
+            alf.topleft_prev = alf.topleft
+            alf.bottomright_prev = alf.bottomright
+
+        if it > 0:
+            all_seq += [seq_data]
+
         cv2.imshow("hdplane",plane_cur)
+        cv2.imwrite('output/images/' + save_name,plane_cur)
+        all_imgs += [img_data]
+
+
+
+
+
         # cv2.waitKey(20)
         key = cv2.waitKey(20)
         if key==ord('q'):
             break
+
+    with open(annotations_file, 'w') as handle:
+        yaml.dump(all_imgs, handle)
+    with open(sequence_file, 'w') as handle:
+        yaml.dump(all_seq, handle)
 
     hdplane = showTrace(hsv_plane,alf,side,ch)
     cv2.imshow("hdplane",hdplane)
