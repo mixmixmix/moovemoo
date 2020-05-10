@@ -198,7 +198,7 @@ def main():
         img_data['width'] = side
         img_data['height'] = side
 
-        if it > 0:
+        if it > 1: #we need two frames before the current one
             seq_data = {'object':[]}
             seq_data['filename'] = save_name
             seq_data['p1_filename'] = 'im' + '{:04d}'.format(it-1) + '.jpg'
