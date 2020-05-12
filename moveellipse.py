@@ -6,13 +6,16 @@ import matplotlib.pyplot as plt
 import colorsys
 from skimage.color import hsv2rgb
 import cv2
+from collections import deque
 
 class Mooveemodel:
     def __init__(self, x_init, y_init):
         self.mu = np.zeros(2)
-        self.theta = np.ones(2)*0.4
+        self.theta = np.ones(2)*0.1
         self.sigma = np.ones(2)*10
         self.v = np.zeros(2)
+        self.winsize = 5
+        self.vs = (deque(self.winsize * [1]),deque(self.winsize * [1]))
         self.dt = np.ones(2)
         self.rng = np.random.default_rng()
         self.pos = np.array([x_init,y_init])
@@ -29,6 +32,13 @@ class Mooveemodel:
             + theta1 * (mu1 - v1) * dt1
             + sigma1 * rng1.normal(0,np.sqrt(dt1),2)
         )
+
+        #update moving average for both coordinates
+        for i in [0,1]:
+            self.vs[i].popleft()
+            self.vs[i].append(self.v[i])
+            self.v[i] = sum(list(self.vs[i])) / float(len(self.vs[i]))
+
         return self.v
 
     def updatePosition(self):
@@ -87,7 +97,9 @@ def updateZwkPosition(zwk,zwks,x_home,y_home,mm):
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
     cur_v = mm.updateSpeed()
+    print(cur_v)
     cur_pos = mm.updatePosition()
+    print(cur_pos)
 
     zwk.angle = mm.getDirection()
 
@@ -105,11 +117,6 @@ def handleColisions(zwk, borders, zwks_list):
     lside = borders.x_min # ASSUME IT IS SQUARE
     zwk.x_pos = max(min(zwk.x_pos,rside-1),lside)
     zwk.y_pos = max(min(zwk.y_pos,rside-1),lside)
-    #zwk.state = 3
-
-    # rng = np.random.default_rng()
-    # newturn = rng.normal(0,max(10,0),1)
-    # zwk.angle = zwk.angle + newturn
 
     return zwk
 
@@ -259,7 +266,7 @@ def main():
 
 
         # cv2.waitKey(20)
-        key = cv2.waitKey(20)
+        key = cv2.waitKey(100)
         if key==ord('q'):
             break
 
