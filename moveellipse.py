@@ -11,10 +11,10 @@ from collections import deque
 class Mooveemodel:
     def __init__(self, x_init, y_init):
         self.mu = np.zeros(2)
-        self.theta = np.ones(2)*0.1
+        self.theta = np.ones(2)*0.05
         self.sigma = np.ones(2)*10
         self.v = np.zeros(2)
-        self.winsize = 5
+        self.winsize = 10
         self.vs = (deque(self.winsize * [1]),deque(self.winsize * [1]))
         self.dt = np.ones(2)
         self.rng = np.random.default_rng()
@@ -33,18 +33,15 @@ class Mooveemodel:
             + sigma1 * rng1.normal(0,np.sqrt(dt1),2)
         )
 
-        if dist_home == 0:
-            vec_home = np.zeros(2)
         #homing mechanism
-        move_v = self.v
-        print("speed: " + str(np.linalg.norm(move_v)))
-        self.v = move_v + 0.5 * dist_home * vec_home
+        if dist_home > 0.8: #close to the county borders
+            self.v = 10 * vec_home
 
         #update moving average for both coordinates
         for i in [0,1]:
             self.vs[i].popleft()
             self.vs[i].append(self.v[i])
-            self.v[i] = sum(list(self.vs[i])) / float(len(self.vs[i]))
+            self.v[i] = sum(list(self.vs[i])) / float(self.winsize)
 
         return self.v
 
@@ -183,11 +180,11 @@ def main():
     # cv2.moveWindow('HDplane', 200,200)
     side = 416
     ch = 3 #RGB image displays output
-    borders = Borders(20,20,side-20,side-20)
+    borders = Borders(1,1,side-1,side-1)
 
     #keeps the information of previous occupancy
-    hdplane = np.zeros((side,side,3),np.uint8) 
-    cv2.rectangle(hdplane,(20,20),(side-20,side-20),(230,0,0),4)
+    hdplane = np.zeros((side,side,3),np.uint8)
+    #cv2.rectangle(hdplane,(20,20),(side-20,side-20),(230,0,0),4)
     hsv_plane = np.zeros((side,side,ch),float) #HSV values are 0.0:1.0 hue, 0.0:1.0 saturation, 0:255 (int) value
 
     #np.random.seed(0)
@@ -206,7 +203,7 @@ def main():
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
-    for it in range(100):
+    for it in range(1000):
         for alf in alfs:
             alf = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
             alf = handleColisions(alf,borders,alfs)
