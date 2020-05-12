@@ -20,7 +20,7 @@ class Mooveemodel:
         self.rng = np.random.default_rng()
         self.pos = np.array([x_init,y_init])
 
-    def updateSpeed(self):
+    def updateSpeed(self, dist_home, vec_home):
         v1 = self.v
         mu1 = self.mu
         theta1 = self.theta
@@ -32,6 +32,13 @@ class Mooveemodel:
             + theta1 * (mu1 - v1) * dt1
             + sigma1 * rng1.normal(0,np.sqrt(dt1),2)
         )
+
+        if dist_home == 0:
+            vec_home = np.zeros(2)
+        #homing mechanism
+        move_v = self.v
+        print("speed: " + str(np.linalg.norm(move_v)))
+        self.v = move_v + 0.5 * dist_home * vec_home
 
         #update moving average for both coordinates
         for i in [0,1]:
@@ -92,14 +99,18 @@ def normToOne(vallist):
 Updates position of all Zwierzaks.
 They generally like to cluster, if they are suitably far away
 """
-def updateZwkPosition(zwk,zwks,x_home,y_home,mm):
+def updateZwkPosition(zwk,zwks,x_home,y_home,side,mm):
 
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
-    cur_v = mm.updateSpeed()
-    print(cur_v)
+
+    #homing
+    vec_home = [x_home - zwk.x_pos, y_home - zwk.y_pos]
+    vec_home_unit = vec_home/np.linalg.norm(vec_home)
+    dist_home = 2*np.linalg.norm(vec_home)/side
+
+    cur_v = mm.updateSpeed(dist_home, vec_home_unit)
     cur_pos = mm.updatePosition()
-    print(cur_pos)
 
     zwk.angle = mm.getDirection()
 
@@ -197,7 +208,7 @@ def main():
 
     for it in range(100):
         for alf in alfs:
-            alf = updateZwkPosition(alf,alfs,home[0],home[1],mm)
+            alf = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
             alf = handleColisions(alf,borders,alfs)
             hsv_plane = updateTrace(hsv_plane,alf)
 
