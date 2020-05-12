@@ -7,6 +7,39 @@ import colorsys
 from skimage.color import hsv2rgb
 import cv2
 
+class Mooveemodel:
+    def __init__(self, x_init, y_init):
+        self.mu = np.zeros(2)
+        self.theta = np.ones(2)*0.4
+        self.sigma = np.ones(2)*10
+        self.v = np.zeros(2)
+        self.dt = np.ones(2)
+        self.rng = np.random.default_rng()
+        self.pos = np.array([x_init,y_init])
+
+    def updateSpeed(self):
+        v1 = self.v
+        mu1 = self.mu
+        theta1 = self.theta
+        dt1 = self.dt
+        sigma1 = self.sigma
+        rng1 = self.rng
+
+        self.v = (v1
+            + theta1 * (mu1 - v1) * dt1
+            + sigma1 * rng1.normal(0,np.sqrt(dt1),2)
+        )
+        return self.v
+
+    def updatePosition(self):
+        self.pos = self.pos + self.v * self.dt
+        return self.pos
+
+    def getDirection(self):
+        return np.degrees(np.arctan2(self.v[1],self.v[0]))
+
+
+
 def updateTrace(hsv_plane,alf):
     cc = hsv_plane[alf.x_pos,alf.y_pos]
     cv2.ellipse(hsv_plane,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,(alf.hsv[0], alf.hsv[1],min(cc[2]+10,255)),-1)
@@ -49,45 +82,17 @@ def normToOne(vallist):
 Updates position of all Zwierzaks.
 They generally like to cluster, if they are suitably far away
 """
-def updatePosition(zwk,zwks,x_home,y_home):
-    rng = np.random.default_rng()
+def updateZwkPosition(zwk,zwks,x_home,y_home,mm):
+
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
+    cur_v = mm.updateSpeed()
+    cur_pos = mm.updatePosition()
 
+    zwk.angle = mm.getDirection()
 
-    if rng.binomial(1,0.05):
-        zwk.state=rng.integers(0,2)
-
-    if zwk.state==0:
-        zwk.speed = 1
-    if zwk.state == 1:
-        zwk.speed = rng.normal(3,1,1)
-    if zwk.state == 2:
-        zwk.speed = zwk.speed + rng.normal(3,1,1)
-
-    #homing
-    vec_home = [x_home - zwk.x_pos, y_home - zwk.y_pos]
-    dist_home = np.linalg.norm(vec_home)
-    ang_home = np.degrees(np.arctan2(vec_home[1],vec_home[0])) #rng.normal(0,10,1)
-
-    ang_explore = rng.normal(0,max(zwk.speed,0),1)
-    new_angle = zwk.angle + ang_explore
-    dirhome = (ang_home - new_angle)/360 #between 0,1
-
-    if dist_home > 150:
-        ang_tohome = 4
-    else:
-        ang_tohome = 0
-    zwk.angle = new_angle + dirhome * ang_tohome
-
-    dx = int(zwk.speed * np.cos(np.pi * zwk.angle/180))
-    dy = int(zwk.speed * np.sin(np.pi * zwk.angle/180))
-    vec_explore = [dx,dy]
-
-
-    zwk.x_pos = zwk.x_prev+dx
-    zwk.y_pos = zwk.y_prev+dy
-
+    zwk.x_pos = int(cur_pos[0])
+    zwk.y_pos = int(cur_pos[1])
     return zwk
 
 """
@@ -178,14 +183,14 @@ def main():
     # alf3 = Zwierzak('alf3',x_init,y_init,hue=0.3,sat=1)
     # alf4 = Zwierzak('alf4',42,66,hue=0.4,sat=1)
     # alfs = [alf1,alf2,alf3,alf4,alf0]
-    alfs = [alf0,alf1]
-
+    alfs = [alf0]
+    mm = Mooveemodel(x_init,y_init)
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
     for it in range(100):
         for alf in alfs:
-            alf = updatePosition(alf,alfs,home[0],home[1])
+            alf = updateZwkPosition(alf,alfs,home[0],home[1],mm)
             alf = handleColisions(alf,borders,alfs)
             hsv_plane = updateTrace(hsv_plane,alf)
 
@@ -213,8 +218,8 @@ def main():
             # cv2.rectangle(plane_cur,r1,r2,(0,0,255),2)
             alf.topleft = (float(min(r1[0],r2[0])),float(min(r1[1],r2[1])))
             alf.bottomright = (float(max(r1[0],r2[0])),float(max(r1[1],r2[1])))
-
-            obj = {}
+            # print("New TL: {}".format(alf.topleft[0]))
+            obj = dict()
             obj['name'] = 'alf'
             obj['xmin'] = alf.topleft[0]
             obj['ymin'] = alf.topleft[1]
@@ -224,7 +229,7 @@ def main():
             obj['time']=it
             img_data['object'] += [obj]
 
-            if it > 0:
+            if it > 1:
                 obj = {}
                 obj['name'] = 'alf'
                 obj['xmin'] = alf.topleft[0]
@@ -235,12 +240,14 @@ def main():
                 obj['pymin'] = alf.topleft_prev[1]
                 obj['pxmax'] = alf.bottomright_prev[0]
                 obj['pymax'] = alf.bottomright_prev[1]
-
                 seq_data['object'] += [obj]
+
             alf.topleft_prev = alf.topleft
             alf.bottomright_prev = alf.bottomright
+            # print("New TL again: {}".format(alf.topleft[0]))
+            # print("Old TL: {}".format(alf.topleft_prev[0]))
 
-        if it > 0:
+        if it > 1:
             all_seq += [seq_data]
 
         cv2.imshow("hdplane",plane_cur)
