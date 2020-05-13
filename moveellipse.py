@@ -203,7 +203,7 @@ def main():
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
-    for it in range(1000):
+    for it in range(100000):
         for alf in alfs:
             alf = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
             alf = handleColisions(alf,borders,alfs)
@@ -212,7 +212,7 @@ def main():
         plane_cur = hdplane.copy()
 
         #saving all the output:
-        save_name = 'im' + '{:04d}'.format(it) + '.jpg'
+        save_name = 'alfim' + '{:05d}'.format(it) + '.jpg'
         img_data = {'object':[]}
         img_data['filename'] = save_name
         img_data['width'] = side
@@ -221,8 +221,8 @@ def main():
         if it > 1: #we need two frames before the current one
             seq_data = {'object':[]}
             seq_data['filename'] = save_name
-            seq_data['p1_filename'] = 'im' + '{:04d}'.format(it-1) + '.jpg'
-            seq_data['p2_filename'] = 'im' + '{:04d}'.format(it-2) + '.jpg'
+            seq_data['p1_filename'] = 'alfim' + '{:05d}'.format(it-1) + '.jpg'
+            seq_data['p2_filename'] = 'alfim' + '{:05d}'.format(it-2) + '.jpg'
             seq_data['width'] = 416
             seq_data['height'] = 416
 
@@ -265,18 +265,15 @@ def main():
         if it > 1:
             all_seq += [seq_data]
 
-        cv2.imshow("hdplane",plane_cur)
         cv2.imwrite('output/images/' + save_name,plane_cur)
         all_imgs += [img_data]
 
+        # cv2.imshow("hdplane",plane_cur)
+        # # cv2.waitKey(20)
+        # key = cv2.waitKey(100)
+        # if key==ord('q'):
+        #     break
 
-
-
-
-        # cv2.waitKey(20)
-        key = cv2.waitKey(100)
-        if key==ord('q'):
-            break
 
     with open(annotations_file, 'w') as handle:
         yaml.dump(all_imgs, handle)
