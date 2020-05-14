@@ -7,37 +7,40 @@ import colorsys
 from skimage.color import hsv2rgb
 import cv2
 from collections import deque
+from scipy.special import softmax
+
 
 class Mooveemodel:
     def __init__(self, x_init, y_init):
         self.mu = np.zeros(2)
         self.theta = np.ones(2)*0.5
-        self.sigma = np.ones(2)*10
+        self.sigma = [10,0.1]
         self.v = np.zeros(2)
         self.winsize = 10
         self.vs = (deque(self.winsize * [1]),deque(self.winsize * [1]))
         self.dt = np.ones(2)
         self.rng = np.random.default_rng()
         self.pos = np.array([x_init,y_init])
+        self.os = np.zeros(2)
+        self.angle = 0
 
     def updateSpeed(self, dist_home, vec_home):
-        v1 = self.v
+        os1 = self.os
         mu1 = self.mu
         theta1 = self.theta
         dt1 = self.dt
         sigma1 = self.sigma
         rng1 = self.rng
 
-        self.v = (v1
-            + theta1 * (mu1 - v1) * dt1
+        self.os = (os1
+            + theta1 * (mu1 - os1) * dt1
             + sigma1 * rng1.normal(0,np.sqrt(dt1),2)
         )
 
-        #update moving average for both coordinates
-        for i in [0,1]:
-            self.vs[i].popleft()
-            self.vs[i].append(self.v[i])
-            self.v[i] = sum(list(self.vs[i])) / float(self.winsize)
+        self.angle = self.angle + self.os[1] * dt1[1]
+
+        self.v[0] = abs(self.os[0])*np.cos(self.angle)
+        self.v[1] = abs(self.os[0])*np.sin(self.angle)
 
         return self.v
 
