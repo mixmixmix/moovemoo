@@ -1,5 +1,5 @@
 import math
-import yaml, os 
+import yaml, os, argparse
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,7 +11,7 @@ from collections import deque
 class Mooveemodel:
     def __init__(self, x_init, y_init):
         self.mu = np.zeros(2)
-        self.theta = np.ones(2)*0.05
+        self.theta = np.ones(2)*0.5
         self.sigma = np.ones(2)*10
         self.v = np.zeros(2)
         self.winsize = 10
@@ -33,10 +33,6 @@ class Mooveemodel:
             + sigma1 * rng1.normal(0,np.sqrt(dt1),2)
         )
 
-        #homing mechanism
-        if dist_home > 0.8: #close to the county borders
-            self.v = 10 * vec_home
-
         #update moving average for both coordinates
         for i in [0,1]:
             self.vs[i].popleft()
@@ -45,14 +41,17 @@ class Mooveemodel:
 
         return self.v
 
-    def updatePosition(self):
-        self.pos = self.pos + self.v * self.dt
-        return self.pos
+    def updatePosition(self, side):
+        new_pos = self.pos + self.v * self.dt
+        self.pos = new_pos % side
+        is_same_panel = True if np.all(new_pos == self.pos) else False
+        return self.pos, is_same_panel
 
     def getDirection(self):
         return np.degrees(np.arctan2(self.v[1],self.v[0]))
 
 
+# def saveSeqIt(it,save_name,)
 
 def updateTrace(hsv_plane,alf):
     cc = hsv_plane[alf.x_pos,alf.y_pos]
@@ -87,6 +86,18 @@ def getRoI(zwk):
             bottomright = (np.max([c1[0],c2[0],c3[0],c4[0]])+offset,np.max([c1[1],c2[1],c3[1],c4[1]])+offset)
             return (head, topleft, bottomright)
 
+def getRoIContours(im):
+    imgray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(imgray, 10, 255, 0)
+    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    for i, c in enumerate(contours):
+        x, y, w, h=cv2.boundingRect(c);
+        if i > 0:
+            print('TODO this function works only for one animal!')
+
+    return (x,y),(x + w, y + h)
+
+
 
 def normToOne(vallist):
     valsum = sum(vallist)
@@ -107,13 +118,15 @@ def updateZwkPosition(zwk,zwks,x_home,y_home,side,mm):
     dist_home = 2*np.linalg.norm(vec_home)/side
 
     cur_v = mm.updateSpeed(dist_home, vec_home_unit)
-    cur_pos = mm.updatePosition()
+    cur_pos, is_same_panel = mm.updatePosition(side)
+
+    record_the_seq = zwk.observationPointSwitch(is_same_panel)
 
     zwk.angle = mm.getDirection()
 
     zwk.x_pos = int(cur_pos[0])
     zwk.y_pos = int(cur_pos[1])
-    return zwk
+    return zwk, record_the_seq
 
 """
 Handle colisions:
@@ -151,6 +164,13 @@ class Zwierzak:
         self.topleft_prev = -111
         self.bottomright_prev = -111
 
+        self.panelswitcher = deque([False, False, False])
+
+    def observationPointSwitch(self, is_same_panel):
+        self.panelswitcher.popleft()
+        self.panelswitcher.append(is_same_panel)
+        return np.all(self.panelswitcher)
+
 """
 This class shows any natural and unnatural boundaries for the environment
 """
@@ -168,7 +188,7 @@ class Borders:
 """
 A little loading-time test of current animal setup
 """
-def main():
+def main(args):
 
 
     os.makedirs("output/images", exist_ok=True)
@@ -207,8 +227,7 @@ def main():
 
     for it in range(1000):
         for alf in alfs:
-            alf = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
-            alf = handleColisions(alf,borders,alfs)
+            alf, record_the_seq = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
             hsv_plane = updateTrace(hsv_plane,alf)
 
         plane_cur = hdplane.copy()
@@ -220,7 +239,7 @@ def main():
         img_data['width'] = side
         img_data['height'] = side
 
-        if it > 1: #we need two frames before the current one
+        if record_the_seq:
             seq_data = {'object':[]}
             seq_data['filename'] = save_name
             seq_data['p1_filename'] = 'alfim' + '{:05d}'.format(it-1) + '.jpg'
@@ -231,11 +250,16 @@ def main():
         for alf in alfs:
             cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,colorsys.hsv_to_rgb(alf.hsv[0], alf.hsv[1],255),-1)
             (head, r1,r2) = getRoI(alf)
+            (rc1,rc2) = getRoIContours(plane_cur)
             cv2.circle(plane_cur,head,3,(0,255,255))
-            # cv2.rectangle(plane_cur,r1,r2,(0,0,255),2)
+            r1 = rc1
+            r2 = rc2
+            # cv2.rectangle(plane_cur,r1,r2,(0,0,255),2) # show bounding box
+            # cv2.rectangle(plane_cur,rc1,rc2,(123,20,255),2) # show bounding box
             alf.topleft = (float(min(r1[0],r2[0])),float(min(r1[1],r2[1])))
             alf.bottomright = (float(max(r1[0],r2[0])),float(max(r1[1],r2[1])))
-            # print("New TL: {}".format(alf.topleft[0]))
+            # print("New TL: {}".format(alf.topleft))
+            # print("old TL: {}".format(alf.topleft_prev))
             obj = dict()
             obj['name'] = 'alf'
             obj['xmin'] = alf.topleft[0]
@@ -246,7 +270,7 @@ def main():
             obj['time']=it
             img_data['object'] += [obj]
 
-            if it > 1:
+            if record_the_seq:
                 obj = {}
                 obj['name'] = 'alf'
                 obj['xmin'] = alf.topleft[0]
@@ -264,17 +288,17 @@ def main():
             # print("New TL again: {}".format(alf.topleft[0]))
             # print("Old TL: {}".format(alf.topleft_prev[0]))
 
-        if it > 1:
+        if record_the_seq:
             all_seq += [seq_data]
 
         cv2.imwrite('output/images/' + save_name,plane_cur)
         all_imgs += [img_data]
 
-        # cv2.imshow("hdplane",plane_cur)
-        # # cv2.waitKey(20)
-        # key = cv2.waitKey(100)
-        # if key==ord('q'):
-        #     break
+        if args.visual:
+            cv2.imshow("hdplane",plane_cur)
+            key = cv2.waitKey(0)
+            if key==ord('q'):
+                break
 
 
     with open(annotations_file, 'w') as handle:
@@ -287,4 +311,14 @@ def main():
     cv2.waitKey(0)
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(
+        description=
+        'Generate a movement sequence',
+        epilog=
+        'Any issues and clarifications: github.com/mixmixmix/moovemoo/issues')
+    parser.add_argument('--visual', '-v', default=False, action='store_true',
+                        help='Show the process')
+
+
+    args = parser.parse_args()
+    main(args)
