@@ -1,5 +1,5 @@
 import math
-import yaml
+import yaml, os 
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -170,6 +170,8 @@ A little loading-time test of current animal setup
 """
 def main():
 
+
+    os.makedirs("output/images", exist_ok=True)
     annotations_file = 'output/train_data.yml'
     sequence_file = 'output/seq_data.yml'
     all_imgs = []
@@ -203,7 +205,7 @@ def main():
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
-    for it in range(100000):
+    for it in range(1000):
         for alf in alfs:
             alf = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
             alf = handleColisions(alf,borders,alfs)
