@@ -194,8 +194,9 @@ def main(args):
 
 
     os.makedirs("output/images", exist_ok=True)
-    annotations_file = 'output/train_data.yml'
-    sequence_file = 'output/seq_data.yml'
+    os.makedirs("output/annotations", exist_ok=True)
+    annotations_file = 'output/annotations/train_data.yml'
+    sequence_file = 'output/annotationsseq_data.yml'
     all_imgs = []
     all_seq = []
 
