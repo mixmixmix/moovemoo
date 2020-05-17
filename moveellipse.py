@@ -190,11 +190,13 @@ A little loading-time test of current animal setup
 """
 def main(args):
 
-
-    os.makedirs("output/images", exist_ok=True)
-    os.makedirs("output/annotations", exist_ok=True)
-    annotations_file = 'output/annotations/train_data.yml'
-    sequence_file = 'output/annotationsseq_data.yml'
+    ddir = args.ddir[0]
+    an_dir = os.path.join(ddir,"annotations")
+    img_dir = os.path.join(ddir,"images")
+    os.makedirs(an_dir, exist_ok=True)
+    os.makedirs(img_dir, exist_ok=True)
+    annotations_file = an_dir + '/train_data.yml'
+    sequence_file = an_dir + '/seq_data.yml'
     all_imgs = []
     all_seq = []
 
@@ -315,7 +317,7 @@ def main(args):
         if record_the_seq:
             all_seq += [seq_data]
 
-        cv2.imwrite('output/images/' + save_name,plane_cur)
+        cv2.imwrite(img_dir + '/' + save_name,plane_cur)
         all_imgs += [img_data]
 
         if args.visual and record_the_seq:
@@ -342,11 +344,12 @@ if __name__ == '__main__':
         'Any issues and clarifications: github.com/mixmixmix/moovemoo/issues')
     parser.add_argument('--visual', '-v', default=False, action='store_true',
                         help='Show the process')
-    parser.add_argument('--sigmaspeed', '-s', nargs=1, type=float, help='sigma speed')
-    parser.add_argument('--thetaspeed', '-t', nargs=1, type=float, help='theta speed')
-    parser.add_argument('--sigmaangularvelocity', '-a', nargs=1, type=float, help='sigma angular velocity')
-    parser.add_argument('--thetaangularvelocity', '-b', nargs=1, type=float, help='theta angular velocity')
+    parser.add_argument('--sigmaspeed', '-s', nargs=1, required=True, type=float, help='sigma speed')
+    parser.add_argument('--thetaspeed', '-t', nargs=1, required=True,  type=float, help='theta speed')
+    parser.add_argument('--sigmaangularvelocity', '-a', required=True,nargs=1, type=float, help='sigma angular velocity')
+    parser.add_argument('--thetaangularvelocity', '-b', required=True, nargs=1, type=float, help='theta angular velocity')
     parser.add_argument('--datapoints', '-p', default=10, nargs=1, type=int, help='Number of datapoints to produce')
+    parser.add_argument('--ddir', '-d', required=True, nargs=1, help='Root of your data directory' )
 
 
     args = parser.parse_args()
