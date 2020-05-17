@@ -123,13 +123,12 @@ def updateZwkPosition(zwk,zwks,x_home,y_home,side,mm):
     cur_v = mm.updateSpeed(dist_home, vec_home_unit)
     cur_pos, is_same_panel = mm.updatePosition(side)
 
-    record_the_seq = zwk.observationPointSwitch(is_same_panel)
 
     zwk.angle = mm.getDirection()
 
     zwk.x_pos = int(cur_pos[0])
     zwk.y_pos = int(cur_pos[1])
-    return zwk, record_the_seq
+    return zwk, is_same_panel
 
 """
 Handle colisions:
@@ -229,11 +228,29 @@ def main(args):
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
     for it in range(1000):
-        for alf in alfs:
-            alf, record_the_seq = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
-            hsv_plane = updateTrace(hsv_plane,alf)
-
         plane_cur = hdplane.copy()
+        for alf in alfs:
+            alf, is_same_panel = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
+            hsv_plane = updateTrace(hsv_plane,alf)
+            cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,colorsys.hsv_to_rgb(alf.hsv[0], alf.hsv[1],255),-1)
+            (head, r1,r2) = getRoI(alf)
+            (rc1,rc2) = getRoIContours(plane_cur)
+            cv2.circle(plane_cur,head,3,(0,255,255))
+
+            roiNotOnBorder = True
+            if \
+               rc1[0]==0 or \
+               rc1[0]==side or \
+               rc2[0]==0 or \
+               rc2[0]==side or \
+               rc1[1]==0 or \
+               rc1[1]==side or \
+               rc2[1]==0 or \
+               rc2[1]==side:
+                roiNotOnBorder = False
+
+            record_the_seq = alf.observationPointSwitch((is_same_panel and roiNotOnBorder))
+
 
         #saving all the output:
         save_name = 'alfim' + '{:05d}'.format(it) + '.jpg'
@@ -251,10 +268,6 @@ def main(args):
             seq_data['height'] = 416
 
         for alf in alfs:
-            cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,colorsys.hsv_to_rgb(alf.hsv[0], alf.hsv[1],255),-1)
-            (head, r1,r2) = getRoI(alf)
-            (rc1,rc2) = getRoIContours(plane_cur)
-            cv2.circle(plane_cur,head,3,(0,255,255))
             r1 = rc1
             r2 = rc2
             # cv2.rectangle(plane_cur,r1,r2,(0,0,255),2) # show bounding box
@@ -297,7 +310,7 @@ def main(args):
         cv2.imwrite('output/images/' + save_name,plane_cur)
         all_imgs += [img_data]
 
-        if args.visual:
+        if args.visual and record_the_seq:
             cv2.imshow("hdplane",plane_cur)
             key = cv2.waitKey(0)
             if key==ord('q'):
