@@ -11,13 +11,11 @@ from scipy.special import softmax
 
 
 class Mooveemodel:
-    def __init__(self, x_init, y_init):
+    def __init__(self, x_init, y_init, sigma_speed, sigma_angular_velocity, theta_speed, theta_angular_velocity):
         self.mu = np.zeros(2)
-        self.theta = np.ones(2)*0.5
-        self.sigma = [10,0.1]
+        self.theta = [theta_speed,theta_angular_velocity]
+        self.sigma = [sigma_speed,sigma_angular_velocity]
         self.v = np.zeros(2)
-        self.winsize = 10
-        self.vs = (deque(self.winsize * [1]),deque(self.winsize * [1]))
         self.dt = np.ones(2)
         self.rng = np.random.default_rng()
         self.pos = np.array([x_init,y_init])
@@ -223,7 +221,16 @@ def main(args):
     # alf4 = Zwierzak('alf4',42,66,hue=0.4,sat=1)
     # alfs = [alf1,alf2,alf3,alf4,alf0]
     alfs = [alf0]
-    mm = Mooveemodel(x_init,y_init)
+    # sigma_speed = 10
+    # sigma_angular_velocity = 0.1
+    # theta_speed = 0.5
+    # theta_angular_velocity = 0.5
+    sigma_speed = args.sigmaspeed[0]
+    sigma_angular_velocity = args.sigmaangularvelocity[0]
+    theta_speed = args.thetaspeed[0]
+    theta_angular_velocity = args.thetaangularvelocity[0]
+
+    mm = Mooveemodel(x_init,y_init, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity)
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
@@ -334,6 +341,10 @@ if __name__ == '__main__':
         'Any issues and clarifications: github.com/mixmixmix/moovemoo/issues')
     parser.add_argument('--visual', '-v', default=False, action='store_true',
                         help='Show the process')
+    parser.add_argument('--sigmaspeed', '-s', nargs=1, type=float, help='sigma speed')
+    parser.add_argument('--thetaspeed', '-t', nargs=1, type=float, help='theta speed')
+    parser.add_argument('--sigmaangularvelocity', '-a', nargs=1, type=float, help='sigma angular velocity')
+    parser.add_argument('--thetaangularvelocity', '-b', nargs=1, type=float, help='theta angular velocity')
 
 
     args = parser.parse_args()
