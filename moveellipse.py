@@ -14,7 +14,7 @@ class Mooveemodel:
     def __init__(self, x_init, y_init):
         self.mu = np.zeros(2)
         self.theta = np.ones(2)*0.5
-        self.sigma = [10,0.1]
+        self.sigma = [20,0.2]
         self.v = np.zeros(2)
         self.winsize = 10
         self.vs = (deque(self.winsize * [1]),deque(self.winsize * [1]))
@@ -228,7 +228,7 @@ def main(args):
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
-    for it in range(1000):
+    for it in range(args.datapoints[0]):
         for alf in alfs:
             alf, record_the_seq = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
             hsv_plane = updateTrace(hsv_plane,alf)
@@ -321,6 +321,7 @@ if __name__ == '__main__':
         'Any issues and clarifications: github.com/mixmixmix/moovemoo/issues')
     parser.add_argument('--visual', '-v', default=False, action='store_true',
                         help='Show the process')
+    parser.add_argument('--datapoints', '-p', default=10, nargs=1, type=int, help='Number of datapoints to produce')
 
 
     args = parser.parse_args()
