@@ -192,8 +192,9 @@ def main(args):
 
 
     os.makedirs("output/images", exist_ok=True)
-    annotations_file = 'output/train_data.yml'
-    sequence_file = 'output/seq_data.yml'
+    os.makedirs("output/annotations", exist_ok=True)
+    annotations_file = 'output/annotations/train_data.yml'
+    sequence_file = 'output/annotationsseq_data.yml'
     all_imgs = []
     all_seq = []
 
@@ -221,8 +222,8 @@ def main(args):
     # alf4 = Zwierzak('alf4',42,66,hue=0.4,sat=1)
     # alfs = [alf1,alf2,alf3,alf4,alf0]
     alfs = [alf0]
-    # sigma_speed = 10
-    # sigma_angular_velocity = 0.1
+    # sigma_speed = 20
+    # sigma_angular_velocity = 0.2
     # theta_speed = 0.5
     # theta_angular_velocity = 0.5
     sigma_speed = args.sigmaspeed[0]
@@ -234,7 +235,7 @@ def main(args):
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
-    for it in range(1000):
+    for it in range(args.datapoints[0]):
         plane_cur = hdplane.copy()
         for alf in alfs:
             alf, is_same_panel = updateZwkPosition(alf,alfs,home[0],home[1],side,mm)
@@ -345,6 +346,7 @@ if __name__ == '__main__':
     parser.add_argument('--thetaspeed', '-t', nargs=1, type=float, help='theta speed')
     parser.add_argument('--sigmaangularvelocity', '-a', nargs=1, type=float, help='sigma angular velocity')
     parser.add_argument('--thetaangularvelocity', '-b', nargs=1, type=float, help='theta angular velocity')
+    parser.add_argument('--datapoints', '-p', default=10, nargs=1, type=int, help='Number of datapoints to produce')
 
 
     args = parser.parse_args()
