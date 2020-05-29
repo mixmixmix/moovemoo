@@ -11,18 +11,20 @@ from scipy.special import softmax
 
 
 class Mooveemodel:
-    def __init__(self, x_init, y_init, sigma_speed, sigma_angular_velocity, theta_speed, theta_angular_velocity):
-        self.mu = np.zeros(2)
-        self.theta = [theta_speed,theta_angular_velocity]
-        self.sigma = [sigma_speed,sigma_angular_velocity]
-        self.v = np.zeros(2)
+    def __init__(self, x_init, y_init, mu_s, sigma_speed, sigma_angular_velocity, theta_speed, theta_angular_velocity):
+        self.mu = np.array([mu_s,0.])
+        self.theta = np.array([theta_speed,theta_angular_velocity])
+        self.sigma = np.array([sigma_speed,sigma_angular_velocity])
+        self.v = np.array(self.mu)
         self.dt = np.ones(2)
         self.rng = np.random.default_rng()
         self.pos = np.array([x_init,y_init])
-        self.os = np.zeros(2)
-        self.angle = 0
+        self.angle = 0.
+        self.os = np.array(self.mu)
+        self.s = 0
+        self.updateSpeed()
 
-    def updateSpeed(self, dist_home, vec_home):
+    def updateSpeed(self):
         os1 = self.os
         mu1 = self.mu
         theta1 = self.theta
@@ -36,9 +38,10 @@ class Mooveemodel:
         )
 
         self.angle = self.angle + self.os[1] * dt1[1]
-
-        self.v[0] = abs(self.os[0])*np.cos(self.angle)
-        self.v[1] = abs(self.os[0])*np.sin(self.angle)
+        #self.s = np.log1p(np.exp(self.os[0])) #softplus cause it to get stuck in 0.
+        self.s = abs(self.os[0])
+        self.v[0] = self.s*np.cos(self.angle)
+        self.v[1] = self.s*np.sin(self.angle)
 
         return self.v
 
@@ -52,7 +55,7 @@ class Mooveemodel:
         return np.degrees(np.arctan2(self.v[1],self.v[0]))
 
 
-# def saveSeqIt(it,save_name,)
+
 
 def updateTrace(hsv_plane,alf):
     cc = hsv_plane[alf.x_pos,alf.y_pos]
@@ -113,12 +116,7 @@ def updateZwkPosition(zwk,zwks,x_home,y_home,side,mm):
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
 
-    #homing
-    vec_home = [x_home - zwk.x_pos, y_home - zwk.y_pos]
-    vec_home_unit = vec_home/np.linalg.norm(vec_home)
-    dist_home = 2*np.linalg.norm(vec_home)/side
-
-    cur_v = mm.updateSpeed(dist_home, vec_home_unit)
+    cur_v = mm.updateSpeed()
     cur_pos, is_same_panel = mm.updatePosition(side)
 
 
@@ -228,12 +226,13 @@ def main(args):
     # sigma_angular_velocity = 0.2
     # theta_speed = 0.5
     # theta_angular_velocity = 0.5
+    mu_s = args.muspeed[0]
     sigma_speed = args.sigmaspeed[0]
     sigma_angular_velocity = args.sigmaangularvelocity[0]
     theta_speed = args.thetaspeed[0]
     theta_angular_velocity = args.thetaangularvelocity[0]
 
-    mm = Mooveemodel(x_init,y_init, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity)
+    mm = Mooveemodel(x_init,y_init, mu_s, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity)
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
@@ -332,9 +331,10 @@ def main(args):
     with open(sequence_file, 'w') as handle:
         yaml.dump(all_seq, handle)
 
-    hdplane = showTrace(hsv_plane,alf,side,ch)
-    cv2.imshow("hdplane",hdplane)
-    cv2.waitKey(0)
+    # hdplane = showTrace(hsv_plane,alf,side,ch)
+    # cv2.imshow("hdplane",hdplane)
+    # cv2.waitKey(0)
+    print('don done!')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -344,6 +344,7 @@ if __name__ == '__main__':
         'Any issues and clarifications: github.com/mixmixmix/moovemoo/issues')
     parser.add_argument('--visual', '-v', default=False, action='store_true',
                         help='Show the process')
+    parser.add_argument('--muspeed', '-m', nargs=1, required=True, type=float, help='speed mean value')
     parser.add_argument('--sigmaspeed', '-s', nargs=1, required=True, type=float, help='sigma speed')
     parser.add_argument('--thetaspeed', '-t', nargs=1, required=True,  type=float, help='theta speed')
     parser.add_argument('--sigmaangularvelocity', '-a', required=True,nargs=1, type=float, help='sigma angular velocity')
