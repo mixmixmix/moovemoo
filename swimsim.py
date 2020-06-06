@@ -2,6 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
+class Reci:
+    def __init__ (self, loc):
+        self.loc = loc
+        self.pdet = 0.5
+
 class Swimloc:
     def __init__ (self, typeid):
         self.typeid = typeid
@@ -33,6 +38,18 @@ class Smolt:
         self.insea = 0 #insea == 1, finished
 
 """
+Updates detections of all smolts.
+"""
+def updateDetections(fishes, receivers, time):
+    for reci in receivers:
+        for fish in fishes:
+            if fish.loc == reci.loc:
+                if np.random.choice([0,1],p=[1-reci.pdet,reci.pdet]):
+                    logme = "{},{},{}".format(time,fish.fishid,reci.loc)
+                    print(logme)
+
+
+"""
 Updates position of all Smolts.
 """
 def updatePosition(fishes, landscape):
@@ -57,9 +74,12 @@ Version without confluence
 
 1 box = 500m (so receiver only spans one area)
 """
-def drawLandscape(mylandscape,img):
+
+def drawLandscape(mylandscape, myreceivers,img):
     for p, landscape in enumerate(mylandscape):
         cv2.rectangle(img,(10*p,0),(10+10*p,10),landscape.disp,-1)
+    for reci in myreceivers:
+        cv2.rectangle(img,(10*reci.loc,0),(10+10*reci.loc,2),(0,0,255),-1)
 
 def updateLandscape(fishes,img):
     for p, fish in enumerate(fishes):
@@ -84,15 +104,17 @@ def main():
     landscape_view = np.zeros((40,600,3),np.uint8)
     mylandscape_list = [0,0,1,2,1,0,0,1,1,1,1,1,1,1,1,2,2,1,0,0,0,0,1]
     mylandscape = list(map(Swimloc, mylandscape_list))
+    myreceivers = [Reci(3), Reci(10), Reci(15)]
 
     fishes = list(map(Smolt, list(range(5))))
 
-    drawLandscape(mylandscape,landscape_view)
+    drawLandscape(mylandscape,myreceivers, landscape_view)
     #show initial fish positions
     showLandscape(landscape_view,fishes)
 
     for t in range(100):
         updatePosition(fishes, mylandscape)
+        updateDetections(fishes, myreceivers, t)
         showLandscape(landscape_view,fishes)
 
 if __name__ == '__main__':
