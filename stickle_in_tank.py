@@ -44,7 +44,7 @@ def updateSticklePosition(zwk,mm):
 
     zwk.angle = mm.getDirection()
 
-    print(f'We experience {cur_v} and {cur_pos}')
+    # print(f'We experience {cur_v} and {cur_pos}')
 
     zwk.x_pos = int(cur_pos[0])
     zwk.y_pos = int(cur_pos[1])
@@ -75,7 +75,7 @@ def main():
 
     #cv2.namedWindow('HDplane', cv2.WINDOW_GUI_EXPANDED)
     # cv2.moveWindow('HDplane', 200,200)
-    side = 416
+    side = 2000
     ch = 3 #RGB image displays output
 
     #keeps the information of previous occupancy
@@ -89,17 +89,17 @@ def main():
 
     stickle = Stickle('s',x_init,y_init)
     mu_s = 0
-    sigma_speed = 20
-    sigma_angular_velocity = 0.2
+    sigma_speed = 40
+    sigma_angular_velocity = 0.4
     theta_speed = 0.5
-    theta_angular_velocity = 0.5
+    theta_angular_velocity = 0.8
 
     # mm = Mooveemodel(x_init,y_init, mu_s, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity)
     mm = moomodel.Mooveemodel(x_init,y_init, mu_s, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity, border='normal',side=side)
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
-    for it in range(100):
+    for it in range(10000):
         plane_cur = hdplane.copy()
         alf = updateSticklePosition(stickle,mm)
         cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,(123, 12,255),-1)
