@@ -19,16 +19,39 @@ class Mooveemodel:
         self.dt = np.ones(2)
         self.rng = np.random.default_rng()
         self.pos = np.array([x_init,y_init])
-        self.angle = 0.
+        self.angle = 30.
         self.os = np.array(self.mu)
         self.s = 0
-        self.updateSpeed()
+        self.border = border
+
         if border:
-            self.border = border
             if side:
                 self.side = side
             if not side:
                 print(f'You need to provide argument \'side\' for the border conditions {borderMethod}')
+
+        if border=='normal':
+            self.bdist=60 #half the power of border rejection
+
+        self.updateSpeed()
+
+    def borderRepulsionVector(self):
+        dist_low = self.pos[1]
+        dist_high = self.side - self.pos[1]
+        dist_left = self.pos[0]
+        dist_right = self.side - self.pos[0]
+
+        mag = 0.1
+        print(f' The distances are {dist_low} {dist_high}, {dist_left}, {dist_right}')
+        force_low = 1 / (1+math.exp(mag*(dist_low-self.bdist)))
+        force_high = 1 / (1+math.exp(mag*(dist_high-self.bdist)))
+        force_left = 1 / (1+math.exp(mag*(dist_left-self.bdist)))
+        force_right = 1 / (1+math.exp(mag*(dist_right-self.bdist)))
+        print(f' The forceances are {force_low} {force_high}, {force_left}, {force_right}')
+
+        #add vectors:
+        return np.array([force_left-force_right, force_low-force_high])
+
 
     def updateSpeed(self):
         os1 = self.os
@@ -45,6 +68,25 @@ class Mooveemodel:
 
         self.angle = self.angle + self.os[1] * dt1[1]
         #self.s = np.log1p(np.exp(self.os[0])) #softplus cause it to get stuck in 0.
+
+        inv=np.array([0.,0.])#thise must be float otherwise python gets messed up real quick
+        ouv=np.array([0.,0.])
+
+        print(f'pre angle {self.angle}')
+        if self.border=='normal':
+            inv[0] = np.cos(self.angle)
+            inv[1] = np.sin(self.angle)
+            brv = self.borderRepulsionVector()
+            print(f'Repulsion! {brv}')
+            ouv [0] = inv[0] + brv[0]
+            ouv [1] = inv[1] + brv[1]
+            print(f'vector inv: {inv}')
+            print(f'vector brv: {brv}')
+            print(f'vector ouv: {ouv}')
+            self.angle = np.arctan2(ouv[1],ouv[0])
+
+        print(f'post angle {self.angle}')
+
         self.s = abs(self.os[0])
         self.v[0] = self.s*np.cos(self.angle)
         self.v[1] = self.s*np.sin(self.angle)
@@ -54,11 +96,16 @@ class Mooveemodel:
     def updatePosition(self):
         new_pos = self.pos + self.v * self.dt
         if not self.border:
+            self.pos = new_pos
             return self.pos
         elif self.border=='periodic':
             self.pos = new_pos % self.side
             is_same_panel = True if np.all(new_pos == self.pos) else False
             return self.pos, is_same_panel
+        elif self.border=='normal':
+            self.pos = new_pos
+            return self.pos
+
 
 
     def getDirection(self):

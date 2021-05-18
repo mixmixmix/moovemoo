@@ -40,9 +40,11 @@ def updateSticklePosition(zwk,mm):
     zwk.y_prev = zwk.y_pos
 
     cur_v = mm.updateSpeed()
-    cur_pos, is_same_panel = mm.updatePosition()
+    cur_pos = mm.updatePosition()
 
     zwk.angle = mm.getDirection()
+
+    print(f'We experience {cur_v} and {cur_pos}')
 
     zwk.x_pos = int(cur_pos[0])
     zwk.y_pos = int(cur_pos[1])
@@ -61,8 +63,6 @@ class Stickle:
         self.angle = 0
         self.islong = 30 #half of width and height as opencv ellipses measurements defined
         self.iswide = 10
-        self.speed = 2
-        self.state = 0 #0 passive, speed = 1, 1 normal, speed around 3
 
         #unusual numbers to encourage program loudly crashing
         self.topleft = -111
@@ -70,7 +70,6 @@ class Stickle:
         self.topleft_prev = -111
         self.bottomright_prev = -111
 
-        self.panelswitcher = deque([False, False, False])
 
 def main():
 
@@ -96,7 +95,7 @@ def main():
     theta_angular_velocity = 0.5
 
     # mm = Mooveemodel(x_init,y_init, mu_s, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity)
-    mm = moomodel.Mooveemodel(x_init,y_init, mu_s, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity, border='periodic',side=side)
+    mm = moomodel.Mooveemodel(x_init,y_init, mu_s, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity, border='normal',side=side)
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
 
