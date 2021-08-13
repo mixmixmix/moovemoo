@@ -188,7 +188,7 @@ A little loading-time test of current animal setup
 """
 def main(args):
 
-    ddir = args.ddir[0]
+    ddir = f'output/{args.ddir[0]}'
     an_dir = os.path.join(ddir,"annotations")
     img_dir = os.path.join(ddir,"images")
     os.makedirs(an_dir, exist_ok=True)
