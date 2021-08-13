@@ -1,3 +1,13 @@
+import os
+import numpy as np
+from skimage.color import hsv2rgb
+import cv2
+from collections import deque
+from scipy.special import softmax
+import colorsys
+import math
+import yaml
+
 
 """
 We have to get RoI analytically because otherwise we cannot have overlapping even if we can resolved which recognised contour is which animals bounding box.
@@ -6,26 +16,23 @@ TODO make it more reasonable padding for every postion of the ellipse
 TODO make it work with my expanded conciousness (shape i mean physical shape)
 """
 def getRoI(zwk):
-            sinzwk = zwk.islong * math.sin(np.pi * zwk.angle / 180)
-            coszwk = zwk.islong * math.cos(np.pi * zwk.angle / 180)
-            sinzwkw = zwk.iswide * math.sin(np.pi * zwk.angle / 180)
-            coszwkw = zwk.iswide * math.cos(np.pi * zwk.angle / 180)
-            tail = (int(zwk.x_pos-coszwk),int(zwk.y_pos-sinzwk))
-            head = (int(zwk.x_pos+coszwk),int(zwk.y_pos+sinzwk))
-
-            c1 = (int(head[0]+sinzwkw),int(head[1]-coszwkw))
-            c2 = (int(head[0]-sinzwkw),int(head[1]+coszwkw))
-            c3 = (int(tail[0]-sinzwkw),int(tail[1]+coszwkw))
-            c4 = (int(tail[0]+sinzwkw),int(tail[1]-coszwkw))
-            offset = 2 #HACK hardcoded offset
-            # mins of all
-            topleft = (np.min([c1[0],c2[0],c3[0],c4[0]])-offset,np.min([c1[1],c2[1],c3[1],c4[1]])-offset)
-            # maxes of all
-            bottomright = (np.max([c1[0],c2[0],c3[0],c4[0]])+offset,np.max([c1[1],c2[1],c3[1],c4[1]])+offset)
-            return (head, topleft, bottomright)
-
-
-    return (x,y),(x + w, y + h)
+    sinzwk = zwk.islong * math.sin(np.pi * zwk.angle / 180)
+    coszwk = zwk.islong * math.cos(np.pi * zwk.angle / 180)
+    sinzwkw = zwk.iswide * math.sin(np.pi * zwk.angle / 180)
+    coszwkw = zwk.iswide * math.cos(np.pi * zwk.angle / 180)
+    tail = (int(zwk.x_pos-coszwk),int(zwk.y_pos-sinzwk))
+    head = (int(zwk.x_pos+coszwk),int(zwk.y_pos+sinzwk))
+    
+    c1 = (int(head[0]+sinzwkw),int(head[1]-coszwkw))
+    c2 = (int(head[0]-sinzwkw),int(head[1]+coszwkw))
+    c3 = (int(tail[0]-sinzwkw),int(tail[1]+coszwkw))
+    c4 = (int(tail[0]+sinzwkw),int(tail[1]-coszwkw))
+    offset = 2 #HACK hardcoded offset
+    # mins of all
+    topleft = (np.min([c1[0],c2[0],c3[0],c4[0]])-offset,np.min([c1[1],c2[1],c3[1],c4[1]])-offset)
+    # maxes of all
+    bottomright = (np.max([c1[0],c2[0],c3[0],c4[0]])+offset,np.max([c1[1],c2[1],c3[1],c4[1]])+offset)
+    return (head, topleft, bottomright)
 
 
 
@@ -158,7 +165,7 @@ class Borders:
 def main(args):
 
     debug = True
-
+    side = 416
     #read from commandline
     if not debug:
         ddir = f'output/{args.ddir[0]}'
@@ -238,7 +245,6 @@ def main(args):
 
         for alf in alfs:
             alf, is_same_panel = updateZwkPosition(alf,alfs,side,alf.mm)
-            hsv_plane = updateTrace(hsv_plane,alf)
             cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,colorsys.hsv_to_rgb(alf.hsv[0], alf.hsv[1],255),-1)
             (head, r1,r2) = getRoI(alf)
 
@@ -259,7 +265,7 @@ def main(args):
             recthosealfs.append(alf.observationPointSwitch((is_same_panel and roiNotOnBorder)))
 
             #uncomment the following line to see bounding boxez
-            # cv2.rectangle(plane_cur,r1,r2,(123,20,255),2) # show bounding box
+            #cv2.rectangle(plane_cur,r1,r2,(123,20,255),2) # show bounding box
 
             alf.topleft = (float(min(r1[0],r2[0])),float(min(r1[1],r2[1])))
             alf.bottomright = (float(max(r1[0],r2[0])),float(max(r1[1],r2[1])))
@@ -328,3 +334,7 @@ def main(args):
     # cv2.waitKey(0)
     print('don done!')
     cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    args = []
+    main(args)
