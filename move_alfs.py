@@ -7,6 +7,7 @@ from scipy.special import softmax
 import colorsys
 import math
 import yaml
+import argparse
 
 
 """
@@ -22,7 +23,7 @@ def getRoI(zwk):
     coszwkw = zwk.iswide * math.cos(np.pi * zwk.angle / 180)
     tail = (int(zwk.x_pos-coszwk),int(zwk.y_pos-sinzwk))
     head = (int(zwk.x_pos+coszwk),int(zwk.y_pos+sinzwk))
-    
+
     c1 = (int(head[0]+sinzwkw),int(head[1]-coszwkw))
     c2 = (int(head[0]-sinzwkw),int(head[1]+coszwkw))
     c3 = (int(tail[0]-sinzwkw),int(tail[1]+coszwkw))
@@ -35,10 +36,6 @@ def getRoI(zwk):
     return (head, topleft, bottomright)
 
 
-
-def normToOne(vallist):
-    valsum = sum(vallist)
-    return [x/valsum for x in vallist]
 
 """
 Updates position of all Zwierzaks.
@@ -164,28 +161,20 @@ class Borders:
 
 def main(args):
 
-    debug = True
+    debug = False
     side = 416
     #read from commandline
     if not debug:
         ddir = f'output/{args.ddir[0]}'
         dp = args.datapoints[0]
-        mu_s = args.muspeed[0]
-        sigma_speed = args.sigmaspeed[0]
-        sigma_angular_velocity = args.sigmaangularvelocity[0]
-        theta_speed = args.thetaspeed[0]
-        theta_angular_velocity = args.thetaangularvelocity[0]
         show_img = args.visual
     else:
     #here is for testing:
         ddir = f'output/testrun/'
         dp = 20
-        mu_s = 3
-        sigma_speed = 20
-        sigma_angular_velocity = 0.2
-        theta_speed = 0.5
-        theta_angular_velocity = 0.5
         show_img = True
+
+
 
     #prepare directories
     an_dir = os.path.join(ddir,"annotations")
@@ -202,31 +191,36 @@ def main(args):
     borders = Borders(1,1,side-1,side-1)
 
 
-    # #cv2.namedWindow('HDplane', cv2.WINDOW_GUI_EXPANDED)
-    # # cv2.moveWindow('HDplane', 200,200)
-    # ch = 3 #RGB image displays output
-    # #keeps the information of previous occupancy
     hdplane = np.zeros((side,side,3),np.uint8)
-    # #cv2.rectangle(hdplane,(20,20),(side-20,side-20),(230,0,0),4)
-    # hsv_plane = np.zeros((side,side,ch),float) #HSV values are 0.0:1.0 hue, 0.0:1.0 saturation, 0:255 (int) value
 
 
-    #np.random.seed(0)
-    #x_init, y_init = map(int,map(round,np.random.uniform(0, side-1, 2)))
+    mr = np.random.default_rng()
     x_init, y_init = [side//2,side//2]
 
-    mm1 = Mooveemodel(x_init,y_init, mu_s, sigma_speed,sigma_angular_velocity,theta_speed, theta_angular_velocity)
-    mm2 = Mooveemodel(x_init,y_init, mu_s, sigma_speed,0,theta_speed, 0)
+    mu_s = 3
+    sigma_speed = 20
+    sigma_angular_velocity = 0.2
+    theta_speed = 0.5
+    theta_angular_velocity = 0.5
 
-    alf0 = Zwierzak('alf0',x_init,y_init, mm1, hue=0,sat=1)
-    alf1 = Zwierzak('alf1',130,130, mm2, hue=0.6,sat=1)
-    # alf2 = Zwierzak('alf2',2000,50,hue=0.2,sat=1)
-    # alf3 = Zwierzak('alf3',x_init,y_init,hue=0.3,sat=1)
-    # alf4 = Zwierzak('alf4',42,66,hue=0.4,sat=1)
-    # alfs = [alf1,alf2,alf3,alf4,alf0]
-    alfs = [alf0, alf1]
-    # alfs = [alf0]
 
+    alfs = []
+    for a in range(3):
+        x_init, y_init = map(int,map(round,mr.uniform(0, side-1, 2)))
+        mm = Mooveemodel(x_init,y_init,
+                         mr.integers(0,5), #mu_s,
+                         mr.integers(0,30),#sigma_speed,
+                         mr.uniform(0,0.6),#sigma_angular_velocity,
+                         mr.uniform(0,0.8),#theta_speed,
+                         mr.uniform(0,0.7),#theta_angular_velocity
+                         )
+        curalf = Zwierzak(f'alf{a}',
+                          x_init,
+                          y_init,
+                          mm,
+                          hue=mr.uniform(0,1),
+                          sat=1)
+        alfs.append(curalf)
 
     #centre, axes W, H, angle, startagnel, endangle, colour, thinkcness
     # cv2.ellipse(hdplane,(100,100),(50,10),30,0,360,(255,255,0),-1)
@@ -336,5 +330,18 @@ def main(args):
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    args = []
+
+    parser = argparse.ArgumentParser(
+        description=
+        'Generate a movement sequence',
+        epilog=
+        'Any issues and clarifications: github.com/mixmixmix/moovemoo/issues')
+    parser.add_argument('--visual', '-v', default=False, action='store_true',
+                        help='Show the process')
+    parser.add_argument('--datapoints', '-p', default=10, nargs=1, type=int, help='Number of datapoints to produce')
+    parser.add_argument('--ddir', '-d', required=True, nargs=1, help='Root of your data directory' )
+
+
+    args = parser.parse_args()
+
     main(args)
