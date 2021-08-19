@@ -41,16 +41,15 @@ def getRoI(zwk):
 Updates position of all Zwierzaks.
 We are allowing them to run on top of each other for now...
 """
-def updateZwkPosition(zwk,zwks,side,mm):
+def updateZwkPosition(zwk,zwks,side):
 
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
 
-    cur_v = mm.updateSpeed()
-    cur_pos, is_same_panel = mm.updatePosition(side)
+    cur_v = zwk.mm.updateSpeed()
+    cur_pos, is_same_panel = zwk.updatePosition(side)
 
-
-    zwk.angle = mm.getDirection()
+    zwk.angle = zwk.mm.getDirection()
 
     zwk.x_pos = int(cur_pos[0])
     zwk.y_pos = int(cur_pos[1])
@@ -96,14 +95,6 @@ class Mooveemodel:
 
         return self.v
 
-    """
-    Update the position and tell us if we have moved past the border
-    """
-    def updatePosition(self, side):
-        new_pos = self.pos + self.v * self.dt
-        self.pos = new_pos % side
-        is_same_panel = True if np.all(new_pos == self.pos) else False
-        return self.pos, is_same_panel
 
     def getDirection(self):
         return np.degrees(np.arctan2(self.v[1],self.v[0]))
@@ -125,7 +116,9 @@ class Zwierzak:
         self.islong = 30 #half of width and height as opencv ellipses measurements defined
         self.iswide = 10
         self.speed = 2 #shouldn't that be mu_s?
+        self.rng = np.random.default_rng()
         self.state = 0 #we will use state to define our little accelreated moments.
+        self.state_time = 0
 
         #unusual numbers to encourage program loudly crashing
         self.topleft = -111
@@ -143,6 +136,66 @@ class Zwierzak:
         self.panelswitcher.popleft()
         self.panelswitcher.append(is_same_panel)
         return np.all(self.panelswitcher)
+
+    def getStateInfluence(self):
+        state_influence = 1 #keep speed as is
+
+        if self.state == 0:
+            if self.rng.uniform() > 0.95: #prob of going into special state
+                self.state = 1
+                self.state_time = 1
+
+        if self.state == 1:
+            self.state_time = self.state_time + 1
+            if self.state_time == 2:
+                state_influence = 0.7
+                self.islong = 25
+            if self.state_time == 3:
+                state_influence = 0.5
+                self.islong = 20
+            if self.state_time == 4:
+                state_influence = 0.3
+                self.islong = 15
+            if self.state_time == 5:
+                state_influence = 0.1
+                self.islong = 10
+            if self.state_time == 6:
+                state_influence = 0.1
+                self.islong = 10
+            if self.state_time == 7:
+                state_influence = 0.1
+                self.islong = 10
+            if self.state_time == 8:
+                state_influence = 0.5
+                self.islong = 15
+            if self.state_time == 9:
+                state_influence = 1
+                self.islong = 20
+            if self.state_time == 10:
+                state_influence = 1.5
+                self.islong = 25
+            if self.state_time == 11:
+                state_influence = 2
+                self.islong = 30
+                self.state=0
+
+        return state_influence
+    """
+    Update the position and tell us if we have moved past the border. Updating position shouldn't really be job of movement model though....?
+
+    """
+    def updatePosition(self, side):
+
+        #our brilliant deformation on speed change. Contraction - slowdown - expansion
+        #state
+        state_influence = self.getStateInfluence()
+
+        new_pos = self.mm.pos + state_influence * (self.mm.v * self.mm.dt)
+        self.mm.pos = new_pos % side
+        is_same_panel = True if np.all(new_pos == self.mm.pos) else False
+        return self.mm.pos, is_same_panel
+
+
 
 """
 This class shows any natural and unnatural boundaries for the environment
@@ -210,7 +263,7 @@ def main(args):
         mm = Mooveemodel(x_init,y_init,
                          mr.integers(0,5), #mu_s,
                          mr.integers(0,30),#sigma_speed,
-                         mr.uniform(0,0.6),#sigma_angular_velocity,
+                         mr.uniform(0,0.4),#sigma_angular_velocity,
                          mr.uniform(0,0.8),#theta_speed,
                          mr.uniform(0,0.7),#theta_angular_velocity
                          )
@@ -238,7 +291,7 @@ def main(args):
 
 
         for alf in alfs:
-            alf, is_same_panel = updateZwkPosition(alf,alfs,side,alf.mm)
+            alf, is_same_panel = updateZwkPosition(alf,alfs,side)
             cv2.ellipse(plane_cur,(alf.x_pos,alf.y_pos),(alf.islong,alf.iswide),alf.angle,0,360,colorsys.hsv_to_rgb(alf.hsv[0], alf.hsv[1],255),-1)
             (head, r1,r2) = getRoI(alf)
 
