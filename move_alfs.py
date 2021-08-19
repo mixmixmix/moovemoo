@@ -214,18 +214,14 @@ class Borders:
 
 def main(args):
 
-    debug = False
     side = 416
     #read from commandline
-    if not debug:
-        ddir = f'output/{args.ddir[0]}'
-        dp = args.datapoints[0]
-        show_img = args.visual
-    else:
-    #here is for testing:
-        ddir = f'output/testrun/'
-        dp = 20
-        show_img = True
+    ddir = f'output/{args.ddir[0]}'
+    dp = args.datapoints[0]
+    show_img = args.visual
+    # ddir = f'output/testrun/'
+    # dp = 20
+    # show_img = True
 
 
 
@@ -312,7 +308,7 @@ def main(args):
             recthosealfs.append(alf.observationPointSwitch((is_same_panel and roiNotOnBorder)))
 
             #uncomment the following line to see bounding boxez
-            #cv2.rectangle(plane_cur,r1,r2,(123,20,255),2) # show bounding box
+            # DEBUG cv2.rectangle(plane_cur,r1,r2,(123,20,255),2) # show bounding box
 
             alf.topleft = (float(min(r1[0],r2[0])),float(min(r1[1],r2[1])))
             alf.bottomright = (float(max(r1[0],r2[0])),float(max(r1[1],r2[1])))
@@ -332,7 +328,7 @@ def main(args):
         record_the_seq = np.all(recthosealfs)
 
         if record_the_seq:
-            # cv2.putText(plane_cur, "R",  (30,30), cv2. FONT_HERSHEY_COMPLEX_SMALL, 1.0, (0,0,250), 2);
+            #DEBUG cv2.putText(plane_cur, "R",  (30,30), cv2. FONT_HERSHEY_COMPLEX_SMALL, 1.0, (0,0,250), 2);
             seq_data = {'object':[]}
             seq_data['filename'] = save_name
             seq_data['p1_filename'] = 'alfim' + '{:05d}'.format(it-1) + '.jpg'
