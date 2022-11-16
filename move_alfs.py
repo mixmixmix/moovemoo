@@ -228,7 +228,9 @@ def main(args):
     #prepare directories
     an_dir = os.path.join(ddir,"annotations")
     img_dir = os.path.join(ddir,"images")
+    gt_dir = os.path.join(ddir,"groundtruths")
     os.makedirs(an_dir, exist_ok=True)
+    os.makedirs(gt_dir, exist_ok=True)
     os.makedirs(img_dir, exist_ok=True)
     annotations_file = an_dir + '/train_data.yml'
     sequence_file = an_dir + '/seq_data.yml'
@@ -279,7 +281,11 @@ def main(args):
         recthosealfs = [] #all animals must be visible and moving within current panel to be useful for training
 
         #saving all the output:
-        save_name = 'alfim' + '{:05d}'.format(it) + '.jpg'
+        save_name_seed = 'alfim' + '{:05d}'.format(it)
+        save_name = save_name_seed + '.jpg'
+        fname_gt = os.path.join(gt_dir, f'{save_name_seed}.txt')
+
+        file_gt = open(fname_gt, 'w')
         img_data = {'object':[]}
         img_data['filename'] = save_name
         img_data['width'] = side
@@ -350,9 +356,17 @@ def main(args):
                 obj['pymax'] = alf.bottomright_prev[1]
                 seq_data['object'] += [obj]
 
+            file_gt.write('alf' + " ")
+            file_gt.write(str(alf.topleft[0]) + " ")
+            file_gt.write(str(alf.topleft[1]) + " ")
+            file_gt.write(str(alf.bottomright[0]) + " ")
+            file_gt.write(str(alf.bottomright[1]))
+            file_gt.write('\n')
+
             alf.topleft_prev = alf.topleft
             alf.bottomright_prev = alf.bottomright
 
+        file_gt.close()
 
         if record_the_seq:
             all_seq += [seq_data]
@@ -375,7 +389,7 @@ def main(args):
     # hdplane = showTrace(hsv_plane,alf,side,ch)
     # cv2.imshow("hdplane",hdplane)
     # cv2.waitKey(0)
-    print('don done!')
+    print('done and done!')
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
