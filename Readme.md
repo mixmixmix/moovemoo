@@ -9,3 +9,8 @@ Examples:
 ```
 python move_alfs.py --ddir threealfs --datapoints 10000
 ```
+
+to generate a video from jpgs, use ffmpeg:
+```
+ffmpeg -i images/threealfsim%05d.jpg -c:v libx264 out.mp4
+```

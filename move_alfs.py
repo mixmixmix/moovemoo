@@ -137,6 +137,10 @@ class Zwierzak:
         self.panelswitcher.append(is_same_panel)
         return np.all(self.panelswitcher)
 
+    """
+    This needs to be coded mathematically, now it is a bit of a hack
+    It is fine however for now.
+    """
     def getStateInfluence(self):
         state_influence = 1 #keep speed as is
 
@@ -216,7 +220,8 @@ def main(args):
 
     side = 416
     #read from commandline
-    ddir = f'output/{args.ddir[0]}'
+    oname = args.ddir[0]
+    ddir = f'output/{oname}'
     dp = args.datapoints[0]
     show_img = args.visual
     # ddir = f'output/testrun/'
@@ -281,7 +286,7 @@ def main(args):
         recthosealfs = [] #all animals must be visible and moving within current panel to be useful for training
 
         #saving all the output:
-        save_name_seed = 'alfim' + '{:05d}'.format(it)
+        save_name_seed = oname + 'im' + '{:05d}'.format(it)
         save_name = save_name_seed + '.jpg'
         fname_gt = os.path.join(gt_dir, f'{save_name_seed}.txt')
 
