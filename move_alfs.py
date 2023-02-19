@@ -342,8 +342,8 @@ def main(args):
             #DEBUG cv2.putText(plane_cur, "R",  (30,30), cv2. FONT_HERSHEY_COMPLEX_SMALL, 1.0, (0,0,250), 2);
             seq_data = {'object':[]}
             seq_data['filename'] = save_name
-            seq_data['p1_filename'] = 'alfim' + '{:05d}'.format(it-1) + '.jpg'
-            seq_data['p2_filename'] = 'alfim' + '{:05d}'.format(it-2) + '.jpg'
+            seq_data['p1_filename'] = oname + 'im' + '{:05d}'.format(it-1) + '.jpg'
+            seq_data['p2_filename'] = oname + 'im' + '{:05d}'.format(it-2) + '.jpg'
             seq_data['width'] = 416
             seq_data['height'] = 416
 

@@ -2,3 +2,4 @@
 __pychache__/
 test.png
 output/
+.DS_Store
