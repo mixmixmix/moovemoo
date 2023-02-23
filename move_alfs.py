@@ -145,12 +145,14 @@ class Zwierzak:
             if self.rng.uniform() > 0.95: #prob of going into special state
                 self.state = 1
                 self.islong = 10
-                return 10
+                self.external_coefficient_of_noise_term = 10
+                return 0
 
         if self.state == 1:
             self.state=0
             self.islong=30
-            return 1
+            self.external_coefficient_of_noise_term = 1
+            return 0
 
     """
     Update the position and tell us if we have moved past the border. Updating position shouldn't really be job of movement model though....?
