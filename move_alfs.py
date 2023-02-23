@@ -83,7 +83,7 @@ class Mooveemodel:
 
         self.os = (os1
             + theta1 * (mu1 - os1) * dt1
-            + sigma1 * external_coefficient_of_noise_term * rng1.normal(0,np.sqrt(dt1),2)
+            + sigma1 * [external_coefficient_of_noise_term,1] * rng1.normal(0,np.sqrt(dt1),2)
         )
 
         self.angle = self.angle + self.os[1] * dt1[1]
@@ -145,7 +145,7 @@ class Zwierzak:
             if self.rng.uniform() > 0.95: #prob of going into special state
                 self.state = 1
                 self.islong = 10
-                self.external_coefficient_of_noise_term = 10
+                self.external_coefficient_of_noise_term = 50
                 return 0
 
         if self.state == 1:
@@ -161,11 +161,12 @@ class Zwierzak:
     def updatePosition(self, side):
 
         self.updateState()
-        self.mm.updateSpeed(self.external_coefficient_of_noise_term)
 
         new_pos = self.mm.pos + (self.mm.v * self.mm.dt)
         self.mm.pos = new_pos % side
         is_same_panel = True if np.all(new_pos == self.mm.pos) else False
+
+        self.mm.updateSpeed(self.external_coefficient_of_noise_term)
         return self.mm.pos, is_same_panel
 
 
