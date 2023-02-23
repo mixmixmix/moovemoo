@@ -46,7 +46,6 @@ def updateZwkPosition(zwk,zwks,side):
     zwk.x_prev = zwk.x_pos
     zwk.y_prev = zwk.y_pos
 
-    cur_v = zwk.mm.updateSpeed()
     cur_pos, is_same_panel = zwk.updatePosition(side)
 
     zwk.angle = zwk.mm.getDirection()
@@ -74,7 +73,7 @@ class Mooveemodel:
         self.s = 0
         self.updateSpeed()
 
-    def updateSpeed(self):
+    def updateSpeed(self, external_coefficient_of_noise_term=1):
         os1 = self.os
         mu1 = self.mu
         theta1 = self.theta
@@ -84,7 +83,7 @@ class Mooveemodel:
 
         self.os = (os1
             + theta1 * (mu1 - os1) * dt1
-            + sigma1 * rng1.normal(0,np.sqrt(dt1),2)
+            + sigma1 * external_coefficient_of_noise_term * rng1.normal(0,np.sqrt(dt1),2)
         )
 
         self.angle = self.angle + self.os[1] * dt1[1]
@@ -119,6 +118,7 @@ class Zwierzak:
         self.rng = np.random.default_rng()
         self.state = 0 #we will use state to define our little accelreated moments.
         self.state_time = 0
+        self.external_coefficient_of_noise_term = 1
 
         #unusual numbers to encourage program loudly crashing
         self.topleft = -111
@@ -138,63 +138,30 @@ class Zwierzak:
         return np.all(self.panelswitcher)
 
     """
-    This needs to be coded mathematically, now it is a bit of a hack
-    It is fine however for now.
+    every now and then our ALF shrinks and gets a 10x boost of the noise term of the speed that should be visible in the rapid change of position in the next frame
     """
-    def getStateInfluence(self):
-        state_influence = 1 #keep speed as is
-
+    def updateState(self):
         if self.state == 0:
             if self.rng.uniform() > 0.95: #prob of going into special state
                 self.state = 1
-                self.state_time = 1
+                self.islong = 10
+                return 10
 
         if self.state == 1:
-            self.state_time = self.state_time + 1
-            if self.state_time == 2:
-                state_influence = 0.7
-                self.islong = 25
-            if self.state_time == 3:
-                state_influence = 0.5
-                self.islong = 20
-            if self.state_time == 4:
-                state_influence = 0.3
-                self.islong = 15
-            if self.state_time == 5:
-                state_influence = 0.1
-                self.islong = 10
-            if self.state_time == 6:
-                state_influence = 0.1
-                self.islong = 10
-            if self.state_time == 7:
-                state_influence = 0.1
-                self.islong = 10
-            if self.state_time == 8:
-                state_influence = 0.5
-                self.islong = 15
-            if self.state_time == 9:
-                state_influence = 1
-                self.islong = 20
-            if self.state_time == 10:
-                state_influence = 1.5
-                self.islong = 25
-            if self.state_time == 11:
-                state_influence = 2
-                self.islong = 30
-                self.state=0
+            self.state=0
+            self.islong=30
+            return 1
 
-        return state_influence
     """
     Update the position and tell us if we have moved past the border. Updating position shouldn't really be job of movement model though....?
 
     """
     def updatePosition(self, side):
 
-        #our brilliant deformation on speed change. Contraction - slowdown - expansion
-        #state
-        state_influence = self.getStateInfluence()
+        self.updateState()
+        self.mm.updateSpeed(self.external_coefficient_of_noise_term)
 
-        new_pos = self.mm.pos + state_influence * (self.mm.v * self.mm.dt)
+        new_pos = self.mm.pos + (self.mm.v * self.mm.dt)
         self.mm.pos = new_pos % side
         is_same_panel = True if np.all(new_pos == self.mm.pos) else False
         return self.mm.pos, is_same_panel
@@ -219,16 +186,16 @@ class Borders:
 def main(args):
 
     side = 416
+    # oname = 'xyz'
+    # ddir = f'output/testrun/'
+    # dp = 20
+    # show_img = True
+
     #read from commandline
     oname = args.ddir[0]
     ddir = f'output/{oname}'
     dp = args.datapoints[0]
     show_img = args.visual
-    # ddir = f'output/testrun/'
-    # dp = 20
-    # show_img = True
-
-
 
     #prepare directories
     an_dir = os.path.join(ddir,"annotations")
