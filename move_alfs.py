@@ -1,3 +1,9 @@
+"""
+This program generates a toy dataset for uavTracker detector and tracker.
+
+The images are already in a yolo-consistent shape (multiple of 32),
+
+"""
 import os
 import numpy as np
 from skimage.color import hsv2rgb
@@ -197,22 +203,31 @@ def main(args):
     #read from commandline
     oname = args.ddir[0]
     ddir = f'output/{oname}'
+    os.makedirs(ddir, exist_ok=True)
     dp = args.datapoints[0]
     show_img = args.visual
 
     #prepare directories
     an_dir = os.path.join(ddir,"annotations")
-    img_dir = os.path.join(ddir,"images")
+    img_dir = os.path.join(ddir,"subsets")
+    test_dir = os.path.join(img_dir,"test")
+    train_dir = os.path.join(img_dir,"train")
     gt_dir = os.path.join(ddir,"groundtruths")
+    video_dir = os.path.join(ddir,"videos")
     os.makedirs(an_dir, exist_ok=True)
     os.makedirs(gt_dir, exist_ok=True)
     os.makedirs(img_dir, exist_ok=True)
+    os.makedirs(train_dir, exist_ok=True)
+    os.makedirs(test_dir, exist_ok=True)
+    os.makedirs(video_dir, exist_ok=True)
     annotations_file = an_dir + '/train_data.yml'
     sequence_file = an_dir + '/seq_data.yml'
     all_imgs = []
     all_seq = []
 
 
+    fourCC = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
+    out = cv2.VideoWriter(os.path.join(video_dir,'test.avi'), fourCC, 5, (side,side), True)
 
     borders = Borders(1,1,side-1,side-1)
 
@@ -346,7 +361,12 @@ def main(args):
         if record_the_seq:
             all_seq += [seq_data]
 
-        cv2.imwrite(img_dir + '/' + save_name,plane_cur)
+        if (it < 0.8 * dp):
+            cv2.imwrite(train_dir + '/' + save_name,plane_cur)
+        else:
+            cv2.imwrite(test_dir + '/' + save_name,plane_cur)
+            out.write(plane_cur)
+
         all_imgs += [img_data]
 
         if show_img:# and record_the_seq:
